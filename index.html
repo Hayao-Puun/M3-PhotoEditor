@@ -152,33 +152,46 @@
     <!-- メインエリア -->
     <div class="flex flex-1 overflow-hidden">
         
-        <!-- 左サイドバー -->
-        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-6 shrink-0 z-10 hidden sm:flex">
-            <div class="group relative">
+        <!-- 左サイドバー（プリセット） -->
+        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-4 shrink-0 z-10 hidden sm:flex overflow-y-auto overflow-x-hidden custom-scroll">
+            <div class="group relative shrink-0">
                 <button onclick="applyPreset('default')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition" title="パラメータリセット">
                     <i class="ph ph-sliders"></i>
                 </button>
-                <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">パラメータリセット</span>
+                <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">リセット</span>
             </div>
             
-            <div class="w-8 h-px bg-neutral-800"></div>
+            <div class="w-8 h-px bg-neutral-800 shrink-0"></div>
 
-            <div class="flex flex-col gap-3">
-                <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
-                    <span class="font-serif font-bold text-sm">BW</span>
-                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">モノクロ</span>
+            <!-- プリセットボタン群 -->
+            <div class="flex flex-col gap-3 pb-4">
+                <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
+                    <span class="font-serif font-bold text-xs">BW</span>
                 </button>
-                <button onclick="applyPreset('warm')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                <button onclick="applyPreset('warm')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ウォーム">
                     <span class="text-orange-300 text-lg">●</span>
-                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">ウォーム</span>
                 </button>
-                <button onclick="applyPreset('cool')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                <button onclick="applyPreset('cool')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="クール">
                     <span class="text-blue-300 text-lg">●</span>
-                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">クール</span>
                 </button>
-                <button onclick="applyPreset('film')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                <button onclick="applyPreset('film')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="フィルム調">
                     <i class="ph ph-film-strip"></i>
-                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">フィルム調</span>
+                </button>
+                
+                <div class="w-8 h-px bg-neutral-800 shrink-0 mx-auto"></div>
+
+                <!-- 新規追加プリセット -->
+                <button onclick="applyPreset('vivid')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ビビッド">
+                    <i class="ph ph-sparkle text-yellow-400"></i>
+                </button>
+                <button onclick="applyPreset('retro')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="レトロ">
+                    <i class="ph ph-camera-rotate text-orange-400"></i>
+                </button>
+                <button onclick="applyPreset('matte')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="マット">
+                    <i class="ph ph-cloud-fog text-neutral-400"></i>
+                </button>
+                <button onclick="applyPreset('dramatic')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ドラマチック">
+                    <i class="ph ph-lightning text-purple-400"></i>
                 </button>
             </div>
         </aside>
@@ -337,7 +350,7 @@
                 </div>
             </div>
 
-            <div class="mt-auto p-6 text-center">
+            <div class="mt-auto p-6 text-center shrink-0">
                 <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor v2.7</p>
                 <p class="text-[10px] text-neutral-600 mt-1">Created by Hayao</p>
             </div>
@@ -1027,6 +1040,10 @@
                 case 'warm': globalParams.temperature = 30; globalParams.saturation = 10; break;
                 case 'cool': globalParams.temperature = -30; globalParams.contrast = 10; break;
                 case 'film': globalParams.contrast = -10; globalParams.brightness = 5; globalParams.saturation = -20; globalParams.temperature = 10; globalParams.grain = 30; globalParams.vignette = 40; break;
+                case 'vivid': globalParams.saturation = 40; globalParams.contrast = 20; break;
+                case 'retro': globalParams.temperature = 25; globalParams.contrast = -15; globalParams.saturation = -20; globalParams.grain = 25; break;
+                case 'matte': globalParams.saturation = -25; globalParams.contrast = -20; globalParams.highlights = -20; globalParams.shadows = 30; break;
+                case 'dramatic': globalParams.contrast = 45; globalParams.vignette = 60; globalParams.highlights = 20; globalParams.shadows = -20; break;
             }
             updateInputDisplays(globalParams, ''); render();
         };
