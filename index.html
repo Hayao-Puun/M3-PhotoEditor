@@ -392,7 +392,7 @@
 
         // --- メインロジック ---
         
-        const CANVAS_PAD = 80; // 余白サイズ (回転ハンドル等の表示領域確保)
+        const CANVAS_PAD = 80; // 余白サイズ
 
         // DOM要素
         const canvas = document.getElementById('editor-canvas');
@@ -437,8 +437,9 @@
             startX: 0, startY: 0, 
             initialRect: null, 
             initialRotation: 0,
+            anchorGlobal: null, // リサイズ時の固定点
             shape: 'rect',
-            rotation: 0, // ラジアン
+            rotation: 0, 
             rect: { x: 0, y: 0, w: 0, h: 0 }
         };
 
@@ -900,9 +901,21 @@
             const mx = (e.clientX - r.left) / viewState.scale;
             const my = (e.clientY - r.top) / viewState.scale;
             const handle = getHandleUnderMouse(mx, my);
+            
             if (handle) {
                 selectionState.dragMode = (handle === 'rotate') ? 'rotate' : 'resize-' + handle;
                 selectionState.active = true;
+                
+                // リサイズ用：対角のアンカーポイントをグローバル座標で取得
+                const rect = selectionState.rect;
+                const cx = rect.x + rect.w/2; const cy = rect.y + rect.h/2;
+                let ax = rect.x, ay = rect.y; // デフォルトTL
+                if (handle === 'tl') { ax = rect.x + rect.w; ay = rect.y + rect.h; }
+                else if (handle === 'tr') { ax = rect.x; ay = rect.y + rect.h; }
+                else if (handle === 'bl') { ax = rect.x + rect.w; ay = rect.y; }
+                else if (handle === 'br') { ax = rect.x; ay = rect.y; }
+                selectionState.anchorGlobal = rotatePoint(ax, ay, cx, cy, selectionState.rotation);
+
             } else if (isInsideRect(mx, my)) {
                 selectionState.dragMode = 'move'; selectionState.active = true;
             } else {
@@ -937,12 +950,12 @@
                 selectionState.rotation = Math.atan2(my - cy, mx - cx) + Math.PI / 2;
                 render(); return;
             }
-            const ir = selectionState.initialRect; const cx = ir.x + ir.w / 2; const cy = ir.y + ir.h / 2;
-            const p = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
-            const sp = rotatePoint(selectionState.startX, selectionState.startY, cx, cy, -selectionState.rotation);
 
             if (selectionState.dragMode === 'move') {
-                selectionState.rect.x = ir.x + (p.x - sp.x); selectionState.rect.y = ir.y + (p.y - sp.y);
+                const dx = mx - selectionState.startX;
+                const dy = my - selectionState.startY;
+                selectionState.rect.x = selectionState.initialRect.x + dx;
+                selectionState.rect.y = selectionState.initialRect.y + dy;
             } else if (selectionState.dragMode === 'create') {
                 let w = mx - selectionState.startX; let h = my - selectionState.startY;
                 const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? baseImage.width / baseImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
@@ -952,15 +965,35 @@
                 selectionState.active = true;
             } else if (selectionState.dragMode.startsWith('resize')) {
                 const type = selectionState.dragMode.split('-')[1];
-                let { x: nx, y: ny, w: nw, h: nh } = ir;
-                if (type === 'br') { nw = p.x - nx; nh = p.y - ny; }
-                else if (type === 'bl') { nw = (ir.x+ir.w) - p.x; nx = p.x; nh = p.y - ny; }
-                else if (type === 'tr') { nw = p.x - nx; nh = (ir.y+ir.h) - p.y; ny = p.y; }
-                else if (type === 'tl') { nw = (ir.x+ir.w) - p.x; nx = p.x; nh = (ir.y+ir.h) - p.y; ny = p.y; }
+                const anchor = selectionState.anchorGlobal;
+                const rotation = selectionState.rotation;
+                
+                // マウス位置をアンカーを起点としたローカル座標に変換
+                const lp = rotatePoint(mx, my, anchor.x, anchor.y, -rotation);
+                let nw = lp.x, nh = lp.y;
+                
+                // ハンドル位置による方向修正
+                if (type === 'tl' || type === 'bl') nw = -lp.x;
+                if (type === 'tl' || type === 'tr') nh = -lp.y;
+
                 const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? baseImage.width / baseImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
-                if (ratio) { nh = nw / ratio; if (type.includes('t')) ny = (ir.y + ir.h) - nh; }
+                if (ratio) { nh = nw / ratio; }
                 else if (e.shiftKey) { const size = Math.max(Math.abs(nw), Math.abs(nh)); nw = size; nh = size; }
-                selectionState.rect = { x: nx, y: ny, w: Math.abs(nw), h: Math.abs(nh) };
+
+                // 新しい中心座標の計算（アンカーから新しい中心点へ）
+                // アンカーに対する新しいローカル中心
+                let lcx = nw / 2, lcy = nh / 2;
+                if (type === 'tl' || type === 'bl') lcx = -nw / 2;
+                if (type === 'tl' || type === 'tr') lcy = -nh / 2;
+                
+                const newCenter = rotatePoint(anchor.x + lcx, anchor.y + lcy, anchor.x, anchor.y, rotation);
+                
+                selectionState.rect = { 
+                    x: newCenter.x - Math.abs(nw)/2, 
+                    y: newCenter.y - Math.abs(nh)/2, 
+                    w: Math.abs(nw), 
+                    h: Math.abs(nh) 
+                };
             }
             render();
         });
