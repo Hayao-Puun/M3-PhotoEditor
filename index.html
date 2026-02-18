@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3-PhotoEditor Ver.1.4</title>
+    <title>M3-PhotoEditor Ver.1.6</title>
     <!-- M3を活かしたシンプルでカッコイイWebアイコンの設定 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='black'/><rect x='12' y='12' width='76' height='76' rx='10' fill='none' stroke='white' stroke-width='1.5' opacity='0.4'/><text x='50%' y='52%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui, sans-serif' font-weight='900' font-size='48' letter-spacing='-2'>M3</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -92,7 +92,8 @@
                 <!-- ロゴ -->
                 <svg width="24" height="24" viewBox="0 0 100 100" class="shrink-0">
                     <rect width="100" height="100" rx="22" fill="white"/>
-                    <text x="50%" y="52%" dominant-baseline="central" text-anchor="middle" fill="black" font-family="sans-serif" font-weight="900" font-size="50" letter-spacing="-2">M3</text>
+                    <!-- ロゴ位置調整: y="50%"に変更 -->
+                    <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="black" font-family="sans-serif" font-weight="900" font-size="50" letter-spacing="-2">M3</text>
                 </svg>
                 <span class="font-medium tracking-widest text-neutral-100 text-sm hidden sm:block uppercase">PhotoEditor</span>
             </div>
@@ -164,7 +165,10 @@
         <!-- 左サイドバー（プリセット） -->
         <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-4 shrink-0 z-10 hidden sm:flex overflow-y-auto overflow-x-hidden custom-scroll">
             
-            <div class="flex flex-col gap-3 pb-4 pt-2">
+            <!-- FILTERラベルを追加 -->
+            <span class="text-[10px] font-bold text-neutral-500 tracking-widest mt-1">FILTER</span>
+
+            <div class="flex flex-col gap-3 pb-4">
                 <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
                     <span class="font-serif font-bold text-xs">BW</span>
                 </button>
@@ -196,8 +200,10 @@
         <main class="flex-1 bg-neutral-950 relative overflow-hidden canvas-container flex items-center justify-center" id="drop-zone">
             <!-- 初期メッセージ -->
             <div id="placeholder-msg" class="text-center pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-10">
-                <i class="ph ph-image text-6xl text-neutral-700 mb-4"></i>
-                <p class="text-neutral-500 font-light">ここに画像をドロップ<br>または「開く」を選択</p>
+                <!-- アイコン色調整 -->
+                <i class="ph ph-image text-6xl text-neutral-600 mb-4"></i>
+                <!-- テキストを見やすく修正 -->
+                <p class="text-neutral-300 font-medium tracking-wide">ここに画像をドロップ<br>または「開く」を選択</p>
             </div>
             
             <!-- キャンバスラッパー -->
@@ -396,7 +402,7 @@
 
             <!-- フッター情報 -->
             <div class="mt-auto p-6 text-center shrink-0">
-                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.1.4</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.1.6</p>
                 <p class="text-[10px] text-neutral-600 mt-1 tracking-wider">created by Hayao</p>
             </div>
         </aside>
@@ -472,6 +478,7 @@
         let currentMode = 'hand'; 
         let currentFileName = 'photo_edited';
         let baseImage = null; 
+        let initialImage = null; // 追加：初期画像を保持
         
         let viewState = { scale: 1, x: 0, y: 0, isDragging: false, lastX: 0, lastY: 0 };
         let selectionState = { active: false, dragMode: null, startX: 0, startY: 0, initialRect: null, initialRotation: 0, anchorGlobal: null, shape: 'rect', rotation: 0, rect: { x: 0, y: 0, w: 0, h: 0 } };
@@ -573,6 +580,7 @@
                 const img = new Image();
                 img.onload = async () => {
                     baseImage = await createImageBitmap(img);
+                    initialImage = await createImageBitmap(img); // 初期画像を保存
                     canvas.width = baseImage.width + CANVAS_PAD * 2; canvas.height = baseImage.height + CANVAS_PAD * 2;
                     isImageLoaded = true; placeholderMsg.style.display = 'none'; canvas.classList.remove('hidden'); downloadBtn.disabled = false;
                     compareBtn.classList.remove('hidden'); 
@@ -697,13 +705,11 @@
             await saveHistoryState(); cancelAction(); resetView();
         }
 
-        // ピクセルレベル操作（ハイライト、シャドウ、バイブランス）の統合
         function applyPixelManipulations(ctx, width, height, highlights, shadows, vibrance) {
             if (highlights === 0 && shadows === 0 && vibrance === 0) return;
             const imgData = ctx.getImageData(CANVAS_PAD, CANVAS_PAD, baseImage.width, baseImage.height);
             const data = imgData.data; const len = data.length;
             
-            // Vibrance factor (-100 to 100 scaled)
             const vFactor = vibrance / 100; 
 
             for (let i = 0; i < len; i += 4) {
@@ -711,7 +717,6 @@
                 let g = data[i+1];
                 let b = data[i+2];
 
-                // Highlights / Shadows
                 if (highlights !== 0 || shadows !== 0) {
                     const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b; 
                     const nL = lum / 255;
@@ -724,18 +729,15 @@
                     }
                 }
 
-                // Natural Saturation (Vibrance) Corrected Logic
                 if (vibrance !== 0) {
                     const max = Math.max(r, g, b);
                     const avg = (r + g + b) / 3;
-                    const sat = max - avg; // Saturation estimate
+                    const sat = max - avg; 
                     
                     if (sat < 255) {
-                        // Less boost for already saturated pixels
-                        // (1 - sat/255) makes the factor smaller as saturation increases
                         let amt = vFactor * (1 - Math.pow(sat/255, 0.5));
                         
-                        r += (r - avg) * amt * 2.0; // 2.0 strength multiplier
+                        r += (r - avg) * amt * 2.0; 
                         g += (g - avg) * amt * 2.0;
                         b += (b - avg) * amt * 2.0;
                     }
@@ -753,15 +755,20 @@
             const w = canvas.width; const h = canvas.height; const gp = globalParams;
             ctx.clearRect(0, 0, w, h);
             
-            // 比較モードならエフェクトなしで描画して終了
+            // 比較モード時の処理
             if (isCompare) {
-                ctx.filter = 'none'; // 重要: 比較時はフィルターを確実にリセット
-                ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD);
+                ctx.filter = 'none';
+                
+                // 初期画像が存在し、かつキャンバスサイズ（＝現在のベース画像サイズ）と同じ場合のみ初期画像を表示
+                // ※トリミングを行うとサイズが変わるため、その場合は直前のベース画像を表示する（座標ズレ防止）
+                if (initialImage && initialImage.width === canvas.width && initialImage.height === canvas.height) {
+                    ctx.drawImage(initialImage, CANVAS_PAD, CANVAS_PAD);
+                } else {
+                    ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD);
+                }
                 return;
             }
 
-            // コンテキストフィルタ (GPU加速が効くもの)
-            // Blurは最後にかける
             let filterString = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
             if (gp.hue !== 0) filterString += ` hue-rotate(${gp.hue}deg)`;
             if (gp.sepia !== 0) filterString += ` sepia(${gp.sepia}%)`;
@@ -772,25 +779,20 @@
             ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); 
             ctx.filter = 'none';
 
-            // ピクセル操作 (CPU処理)
             if (gp.highlights !== 0 || gp.shadows !== 0 || gp.vibrance !== 0) {
                 applyPixelManipulations(ctx, w, h, gp.highlights, gp.shadows, gp.vibrance);
             }
 
-            // 選択範囲描画 (エフェクト適用のためのバッファ処理)
             if (selectionState.active && (currentMode === 'select' || currentMode === 'circle')) {
                 const lp = localParams; const rect = selectionState.rect; const isInvert = invertCheckbox.checked;
                 const rot = selectionState.rotation; const cx = rect.x + rect.w/2; const cy = rect.y + rect.h/2;
                 if (lp.mosaic > 0 || lp.blur > 0) {
-                    
-                    // 現在のキャンバスの状態（ベース＋グローバルエフェクト済み）を「鮮明画像」として保存
                     const originalCanvas = document.createElement('canvas');
                     originalCanvas.width = canvas.width;
                     originalCanvas.height = canvas.height;
                     const originalCtx = originalCanvas.getContext('2d');
                     originalCtx.drawImage(canvas, 0, 0);
 
-                    // eCを「エフェクト適用後画像」として作成
                     const eC = document.createElement('canvas'); 
                     eC.width = canvas.width; 
                     eC.height = canvas.height;
@@ -807,15 +809,11 @@
                     }
 
                     if (isInvert) {
-                        // 反転モード：背景をぼかし、選択範囲内を鮮明に
-                        
-                        // 1. 全体をエフェクト画像で上書き
                         ctx.save();
                         ctx.setTransform(1, 0, 0, 1, 0, 0);
                         ctx.drawImage(eC, 0, 0); 
                         ctx.restore();
 
-                        // 2. 選択範囲をクリップ
                         ctx.save();
                         ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
                         ctx.beginPath();
@@ -823,13 +821,10 @@
                         else ctx.rect(rect.x, rect.y, rect.w, rect.h);
                         ctx.clip(); 
 
-                        // 3. クリップ領域内に鮮明画像（オリジナル）を描画
                         ctx.translate(cx, cy); ctx.rotate(-rot); ctx.translate(-cx, -cy);
                         ctx.drawImage(originalCanvas, 0, 0);
                         ctx.restore();
-
                     } else {
-                        // 通常モード：選択範囲内をぼかす
                         ctx.save(); 
                         ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
                         ctx.beginPath();
