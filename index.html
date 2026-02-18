@@ -115,6 +115,31 @@
         .flash-overlay {
             animation: flash 0.5s ease-out forwards;
         }
+
+        /* チェックボックス */
+        .custom-checkbox {
+            appearance: none;
+            background-color: #262626;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+        .custom-checkbox:checked {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .custom-checkbox:checked::after {
+            content: '✔';
+            font-size: 10px;
+            color: white;
+            position: absolute;
+        }
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-300 font-sans h-screen flex flex-col overflow-hidden selection:bg-neutral-600 selection:text-white">
@@ -259,6 +284,12 @@
                     </p>
                 </div>
 
+                <!-- 選択範囲の反転オプション -->
+                <div class="mb-5 flex items-center justify-between">
+                    <label for="invert-mask" class="text-xs text-neutral-400 cursor-pointer select-none">選択範囲を反転 (外側に適用)</label>
+                    <input type="checkbox" id="invert-mask" class="custom-checkbox" onchange="requestAnimationFrame(() => render())">
+                </div>
+
                 <!-- ぼかし -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
@@ -304,6 +335,24 @@
                     <input type="range" id="contrast" min="-100" max="100" value="0" class="control-slider">
                 </div>
 
+                <!-- ハイライト (New) -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">ハイライト</span>
+                        <input type="number" id="num-highlights" value="0" min="-100" max="100">
+                    </div>
+                    <input type="range" id="highlights" min="-100" max="100" value="0" class="control-slider">
+                </div>
+
+                <!-- シャドウ (New) -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">シャドウ</span>
+                        <input type="number" id="num-shadows" value="0" min="-100" max="100">
+                    </div>
+                    <input type="range" id="shadows" min="-100" max="100" value="0" class="control-slider">
+                </div>
+
                 <!-- 彩度 -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
@@ -347,7 +396,8 @@
             </div>
 
             <div class="mt-auto p-6 text-center">
-                <p class="text-[10px] text-neutral-600">M3-PhotoEditor Pro v2.1</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor v2.2</p>
+                <p class="text-[10px] text-neutral-600 mt-1">Created by Hayao</p>
             </div>
         </aside>
     </div>
@@ -364,12 +414,12 @@
             push(state) {
                 this.undoStack.push(state);
                 if (this.undoStack.length > this.limit) this.undoStack.shift();
-                this.redoStack = []; // 新しい操作をしたらredoはクリア
+                this.redoStack = [];
                 this.updateButtons();
             }
 
             undo() {
-                if (this.undoStack.length <= 1) return null; // 初期状態は残す
+                if (this.undoStack.length <= 1) return null;
                 const current = this.undoStack.pop();
                 this.redoStack.push(current);
                 this.updateButtons();
@@ -407,6 +457,7 @@
         const placeholderMsg = document.getElementById('placeholder-msg');
         const loadingOverlay = document.getElementById('loading');
         const dropZone = document.getElementById('drop-zone');
+        const invertCheckbox = document.getElementById('invert-mask');
         
         // ツール関連DOM
         const toolBtns = {
@@ -422,10 +473,10 @@
         const history = new HistoryManager();
         let isImageLoaded = false;
         let currentMode = 'hand'; // 'hand' | 'select' | 'crop'
-        let currentFileName = 'm3_pro_edited'; // デフォルトファイル名
+        let currentFileName = 'm3_photo_edited';
         
         // 作業用変数
-        let baseImage = null; // 現在の履歴先端の画像 (ImageBitmap or HTMLImageElement)
+        let baseImage = null; // 現在の履歴先端の画像
         
         let viewState = {
             scale: 1, x: 0, y: 0,
@@ -442,7 +493,8 @@
         // パラメータ (Global & Local)
         const globalParams = {
             brightness: 0, contrast: 0, saturation: 0,
-            temperature: 0, grain: 0, vignette: 0
+            temperature: 0, grain: 0, vignette: 0,
+            highlights: 0, shadows: 0 // New
         };
         
         const localParams = {
@@ -455,33 +507,28 @@
         function setMode(mode) {
             currentMode = mode;
             
-            // ボタンの見た目更新
             Object.keys(toolBtns).forEach(k => {
                 toolBtns[k].classList.toggle('active', k === mode);
             });
 
-            // カーソル更新
             if (mode === 'hand') {
                 canvas.style.cursor = 'grab';
                 canvasWrapper.style.cursor = 'grab';
-                cancelAction(); // 選択解除
+                cancelAction(); 
             } else {
                 canvas.style.cursor = 'crosshair';
                 canvasWrapper.style.cursor = 'crosshair';
             }
 
-            // 右パネルの有効化制御
             if (mode === 'select') {
                 localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
             } else {
                 localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
             }
             
-            // トリミングモード時は選択をクリアして案内を表示
             if (mode === 'crop') {
                  cancelAction();
                  localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
-                 // メッセージ変更
                  localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-crop mb-1 block text-lg"></i>トリミング範囲を選択して<br>「適用」を押してください';
             } else if (mode !== 'select') {
                  localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-cursor-click mb-1 block text-lg"></i>範囲選択ツールまたは<br>トリミングツールを使用してください';
@@ -494,7 +541,6 @@
 
         // パラメータ変更監視
         function getElementId(prefix, key) {
-            // キャメルケース変換: local + blur -> localBlur
             if (!prefix) return key;
             return prefix + key.charAt(0).toUpperCase() + key.slice(1);
         }
@@ -519,13 +565,11 @@
                         slider.value = val;
                         requestAnimationFrame(() => render());
                     });
-                } else {
-                    console.warn(`Element not found: ${id}`);
                 }
             });
         }
         setupParamListeners(globalParams, '');
-        setupParamListeners(localParams, 'local'); // id="localBlur" etc
+        setupParamListeners(localParams, 'local');
 
         // ファイルアップロード
         uploadInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
@@ -539,8 +583,6 @@
 
         function loadFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
-            
-            // 拡張子を除いたファイル名を保存
             currentFileName = file.name.replace(/\.[^/.]+$/, "");
 
             loadingOverlay.classList.remove('hidden');
@@ -550,9 +592,7 @@
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = async () => {
-                    // 初期状態の構築
                     baseImage = await createImageBitmap(img);
-                    
                     canvas.width = baseImage.width;
                     canvas.height = baseImage.height;
                     
@@ -561,15 +601,14 @@
                     canvas.classList.remove('hidden');
                     downloadBtn.disabled = false;
                     
-                    // 履歴初期化
                     history.reset();
-                    // 初期状態を保存（パラメータも含める）
                     saveHistoryState();
 
                     resetView();
-                    setMode('hand'); // 初期はハンドツール
+                    setMode('hand');
                     resetParams(globalParams);
                     resetParams(localParams);
+                    invertCheckbox.checked = false; // Reset checkbox
                     
                     loadingOverlay.classList.add('hidden');
                     loadingOverlay.classList.remove('flex');
@@ -581,9 +620,7 @@
         }
 
         // --- コア機能: 履歴管理 ---
-        
         async function saveHistoryState() {
-            // 一時Canvasを作って画像データを抽出
             const tmpCanvas = document.createElement('canvas');
             tmpCanvas.width = baseImage.width;
             tmpCanvas.height = baseImage.height;
@@ -591,55 +628,35 @@
             tmpCtx.drawImage(baseImage, 0, 0);
             const imageData = tmpCtx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
             
-            // パラメータも保存（Deep Copy）
             const state = {
                 imageData: imageData,
                 globalParams: { ...globalParams }
             };
-            
             history.push(state);
         }
 
         async function restoreState(state) {
             if (!state) return;
-            
-            // 画像データの復元
             baseImage = await createImageBitmap(state.imageData);
             canvas.width = baseImage.width;
             canvas.height = baseImage.height;
-            
-            // パラメータ復元
             Object.assign(globalParams, state.globalParams);
             updateInputDisplays(globalParams, '');
-            
-            // ローカルパラメータと選択範囲はリセット
             resetParams(localParams);
             cancelAction();
-            
             resetView();
             render();
         }
 
-        window.undo = async () => {
-            const state = history.undo();
-            if (state) await restoreState(state);
-        };
-
-        window.redo = async () => {
-            const state = history.redo();
-            if (state) await restoreState(state);
-        };
-
+        window.undo = async () => { const state = history.undo(); if (state) await restoreState(state); };
+        window.redo = async () => { const state = history.redo(); if (state) await restoreState(state); };
 
         // --- コア機能: 適用(Apply) ---
-
         window.applyCurrentAction = async () => {
             if (!selectionState.active) return;
-            
             loadingOverlay.classList.remove('hidden');
             loadingOverlay.classList.add('flex');
 
-            // 処理を次フレームに回してUIブロック回避
             setTimeout(async () => {
                 if (currentMode === 'select') {
                     await applyLocalEffect();
@@ -650,7 +667,6 @@
                 loadingOverlay.classList.add('hidden');
                 loadingOverlay.classList.remove('flex');
                 
-                // 完了フラッシュアニメーション
                 const flash = document.createElement('div');
                 flash.className = 'absolute inset-0 bg-white pointer-events-none flash-overlay z-50';
                 document.body.appendChild(flash);
@@ -663,76 +679,99 @@
             selectionState.active = false;
             selectionState.rect = { x: 0, y: 0, w: 0, h: 0 };
             actionBar.classList.add('hidden');
-            resetParams(localParams); // ローカル調整値もリセット
+            resetParams(localParams);
+            invertCheckbox.checked = false;
             render();
         };
 
         // 部分補正の焼き付け
         async function applyLocalEffect() {
-            // 現在のbaseImageに対して、ローカルエフェクトを焼き付ける
             const tmpCanvas = document.createElement('canvas');
             tmpCanvas.width = baseImage.width;
             tmpCanvas.height = baseImage.height;
             const tmpCtx = tmpCanvas.getContext('2d');
             
-            // 1. ベースを描画
-            tmpCtx.drawImage(baseImage, 0, 0);
-            
-            // 2. 選択範囲のエフェクトを描画
+            const w = tmpCanvas.width;
+            const h = tmpCanvas.height;
             const rect = selectionState.rect;
             const params = localParams;
-            
+            const isInvert = invertCheckbox.checked;
+
             if (params.mosaic > 0 || params.blur > 0) {
-                tmpCtx.save();
-                tmpCtx.beginPath();
-                tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
-                tmpCtx.clip();
+                // 1. まずベース画像を描画
+                tmpCtx.drawImage(baseImage, 0, 0);
+
+                // 2. 「効果付き」画像を別キャンバスに用意
+                const effectCanvas = document.createElement('canvas');
+                effectCanvas.width = w; effectCanvas.height = h;
+                const effectCtx = effectCanvas.getContext('2d');
+                effectCtx.drawImage(baseImage, 0, 0);
                 
-                // モザイク
+                // ぼかし適用
+                if (params.blur > 0) {
+                    // 全体をぼかす
+                    const blurCanvas = document.createElement('canvas');
+                    blurCanvas.width = w; blurCanvas.height = h;
+                    const bCtx = blurCanvas.getContext('2d');
+                    bCtx.filter = `blur(${params.blur}px)`;
+                    bCtx.drawImage(effectCanvas, 0, 0);
+                    effectCtx.clearRect(0, 0, w, h);
+                    effectCtx.drawImage(blurCanvas, 0, 0);
+                }
+                
+                // モザイク適用
                 if (params.mosaic > 0) {
                     const mosaicFactor = Math.max(0.005, 1 - (params.mosaic / 105));
-                    const sw = Math.floor(tmpCanvas.width * mosaicFactor);
-                    const sh = Math.floor(tmpCanvas.height * mosaicFactor);
+                    const sw = Math.floor(w * mosaicFactor);
+                    const sh = Math.floor(h * mosaicFactor);
                     
                     const offC = document.createElement('canvas');
                     offC.width = Math.max(1, sw);
                     offC.height = Math.max(1, sh);
-                    const offCx = offC.getContext('2d');
-                    offCx.drawImage(tmpCanvas, 0, 0, offC.width, offC.height);
+                    const offCtx = offC.getContext('2d');
+                    offCtx.drawImage(effectCanvas, 0, 0, offC.width, offC.height); // blur済みの画像を使う
                     
-                    tmpCtx.imageSmoothingEnabled = false;
-                    tmpCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, tmpCanvas.width, tmpCanvas.height);
-                    tmpCtx.imageSmoothingEnabled = true;
+                    effectCtx.imageSmoothingEnabled = false;
+                    effectCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
+                    effectCtx.imageSmoothingEnabled = true;
                 }
 
-                // ぼかし
-                if (params.blur > 0) {
-                    tmpCtx.filter = `blur(${params.blur}px)`;
-                    // 自分自身を重ねる
-                    tmpCtx.drawImage(tmpCanvas, 0, 0); 
-                    tmpCtx.filter = 'none';
-                }
+                // 3. マスク処理による合成
+                tmpCtx.save();
+                tmpCtx.beginPath();
+                tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
                 
-                tmpCtx.restore();
+                if (isInvert) {
+                    // 反転: 全体に効果をかけて、選択範囲内だけ元画像を上書きする、というロジック
+                    // まず全体を効果画像にする
+                    tmpCtx.restore(); // クリップしない
+                    tmpCtx.clearRect(0, 0, w, h);
+                    tmpCtx.drawImage(effectCanvas, 0, 0); // 全体がエフェクト
+                    
+                    // 選択範囲だけ元画像を上書き
+                    tmpCtx.save();
+                    tmpCtx.beginPath();
+                    tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
+                    tmpCtx.clip();
+                    tmpCtx.drawImage(baseImage, 0, 0); // 内部を元に戻す
+                    tmpCtx.restore();
+                } else {
+                    // 通常: 選択範囲内をクリップして効果画像を描く
+                    tmpCtx.clip();
+                    tmpCtx.drawImage(effectCanvas, 0, 0);
+                    tmpCtx.restore();
+                }
             }
             
-            // 画像更新
             baseImage = await createImageBitmap(tmpCanvas);
-            
-            // 履歴保存
             await saveHistoryState();
-            
-            // 状態リセット
             cancelAction();
         }
 
-        // トリミング実行
         async function applyCrop() {
             const rect = selectionState.rect;
             if (rect.w < 1 || rect.h < 1) return;
             
-            // ImageBitmap.createImageBitmap(image, sx, sy, sw, sh) を使用
-            // 範囲チェック
             const x = Math.max(0, rect.x);
             const y = Math.max(0, rect.y);
             const w = Math.min(rect.w, baseImage.width - x);
@@ -746,75 +785,163 @@
             
             await saveHistoryState();
             cancelAction();
-            resetView(); // トリミング後はフィットさせる
+            resetView();
         }
 
+        // --- ハイライト・シャドウ処理 (ピクセル操作) ---
+        function applyHighlightsShadows(ctx, width, height, highlights, shadows) {
+            if (highlights === 0 && shadows === 0) return;
+            
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const len = data.length;
+
+            // 定数化して高速化
+            const hFactor = -highlights / 100; // 負=ハイライトを下げる
+            const sFactor = shadows / 100;     // 正=シャドウを上げる
+
+            for (let i = 0; i < len; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                // 輝度計算 (Rec.709 coefficients approximated)
+                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                const normLum = lum / 255;
+
+                let adj = 0;
+
+                // ハイライト調整 (明るい部分に影響)
+                if (highlights !== 0) {
+                    // 輝度が高いほど影響大 (mask = normLum^2 for smooth falloff)
+                    const mask = normLum * normLum * normLum; 
+                    adj += mask * hFactor * 255;
+                }
+
+                // シャドウ調整 (暗い部分に影響)
+                if (shadows !== 0) {
+                    // 輝度が低いほど影響大
+                    const mask = (1 - normLum) * (1 - normLum) * (1 - normLum);
+                    adj += mask * sFactor * 255;
+                }
+
+                if (adj !== 0) {
+                    // 加算してクランプ
+                    data[i] = Math.max(0, Math.min(255, r + adj));
+                    data[i + 1] = Math.max(0, Math.min(255, g + adj));
+                    data[i + 2] = Math.max(0, Math.min(255, b + adj));
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
 
         // --- 描画ループ ---
-        
         function render(isExport = false) {
             if (!isImageLoaded || !baseImage) return;
 
             const w = canvas.width;
             const h = canvas.height;
+            const gp = globalParams;
 
             ctx.clearRect(0, 0, w, h);
             
-            // A. 全体フィルタの設定（非破壊）
-            const gp = globalParams;
+            // 1. ベース描画と基本フィルタ
             let filterStr = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
-            
             ctx.filter = filterStr;
             ctx.drawImage(baseImage, 0, 0);
             ctx.filter = 'none';
 
-            // B. プレビュー描画（選択範囲のエフェクト）
-            // 確定前なので、Canvas上で一時的に描画して見せる
+            // 2. ハイライト・シャドウ (ピクセル操作)
+            if (gp.highlights !== 0 || gp.shadows !== 0) {
+                applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
+            }
+
+            // 3. 部分補正プレビュー
             if (selectionState.active && currentMode === 'select') {
                 const lp = localParams;
                 const rect = selectionState.rect;
+                const isInvert = invertCheckbox.checked;
                 
                 if (lp.mosaic > 0 || lp.blur > 0) {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.rect(rect.x, rect.y, rect.w, rect.h);
-                    ctx.clip();
+                    // プレビュー用に現在のキャンバス状態(Global適用済み)を取得して加工する
+                    // 「全体」にエフェクトをかけたバージョンを作る（反転対応のため）
                     
-                    // モザイクプレビュー
+                    const effectCanvas = document.createElement('canvas');
+                    effectCanvas.width = w; effectCanvas.height = h;
+                    const eCtx = effectCanvas.getContext('2d');
+                    eCtx.drawImage(canvas, 0, 0); // 現在のCanvasをコピー
+
+                    // ぼかし
+                    if (lp.blur > 0) {
+                        const bC = document.createElement('canvas');
+                        bC.width = w; bC.height = h;
+                        const bCtx = bC.getContext('2d');
+                        bCtx.filter = `blur(${lp.blur}px)`;
+                        bCtx.drawImage(effectCanvas, 0, 0);
+                        eCtx.clearRect(0,0,w,h);
+                        eCtx.drawImage(bC, 0, 0);
+                    }
+                    // モザイク
                     if (lp.mosaic > 0) {
                         const mosaicFactor = Math.max(0.005, 1 - (lp.mosaic / 105));
                         const sw = Math.floor(w * mosaicFactor);
                         const sh = Math.floor(h * mosaicFactor);
-                        
                         const offC = document.createElement('canvas');
-                        offC.width = Math.max(1, sw);
-                        offC.height = Math.max(1, sh);
+                        offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
                         const offCtx = offC.getContext('2d');
-                        
-                        offCtx.filter = filterStr;
-                        offCtx.drawImage(baseImage, 0, 0, offC.width, offC.height);
-                        
-                        ctx.imageSmoothingEnabled = false;
-                        ctx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
-                        ctx.imageSmoothingEnabled = true;
+                        offCtx.drawImage(eCtx.canvas, 0, 0, offC.width, offC.height); // blur済みを使う
+                        eCtx.imageSmoothingEnabled = false;
+                        eCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
+                        eCtx.imageSmoothingEnabled = true;
                     }
-                    
-                    // ぼかしプレビュー
-                    if (lp.blur > 0) {
-                        ctx.filter = `${filterStr} blur(${lp.blur}px)`;
-                        ctx.drawImage(baseImage, 0, 0, w, h);
+
+                    // 合成
+                    if (isInvert) {
+                        // 反転: 背景をエフェクト画像にし、選択範囲内を元のcanvas画像で上書き
+                        ctx.drawImage(effectCanvas, 0, 0); // 全体エフェクト
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(rect.x, rect.y, rect.w, rect.h);
+                        ctx.clip();
+                        
+                        // 元の状態（Global適用済み）に戻すには？
+                        // 現在のctxはすでにエフェクトで上書きされている。
+                        // baseImageから再描画が必要だが、Highlights等は適用されていない。
+                        // ここはパフォーマンス的に少し重いが、再計算するしかない、
+                        // または、最初に「Global適用済み画像」をオフスクリーンに退避させておくのが正解。
+                        
+                        // 簡易実装: クリップ内部を再描画 (Highlights計算含む)
+                        // これだとループ2回になるので重い。
+                        // => 戦略変更: render冒頭で CleanGlobalImage を作るべき。
+                        
+                        // 今回はコードの複雑化を避けるため、再描画アプローチをとる
+                        ctx.filter = filterStr;
+                        ctx.drawImage(baseImage, 0, 0);
                         ctx.filter = 'none';
+                        if (gp.highlights !== 0 || gp.shadows !== 0) {
+                             // クリップ領域だけ処理すれば高速だが、関数は全体処理になっている。
+                             // クリップされているので見た目はOKだが計算量は減らない。
+                             // プレビューなので許容する。
+                             applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
+                        }
+                        ctx.restore();
+                        
+                    } else {
+                        // 通常: 選択範囲内をクリップしてエフェクト画像を描く
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(rect.x, rect.y, rect.w, rect.h);
+                        ctx.clip();
+                        ctx.drawImage(effectCanvas, 0, 0);
+                        ctx.restore();
                     }
-                    
-                    ctx.restore();
                 }
             }
 
-            // C. トリミングプレビュー（白枠のみ）
+            // 4. トリミングプレビュー（白枠のみ）
             if (selectionState.active && currentMode === 'crop') {
                 if (!isExport) {
                     const r = selectionState.rect;
-                    // 白い破線
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 2 / viewState.scale;
                     ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]); 
@@ -823,9 +950,8 @@
                 }
             }
 
-            // D. オーバーレイエフェクト（全体）
+            // 5. オーバーレイエフェクト (Grain, Color Temp, Vignette)
             ctx.save();
-            // 色温度
             if (gp.temperature !== 0) {
                 ctx.globalCompositeOperation = 'overlay';
                 ctx.fillStyle = gp.temperature > 0 
@@ -833,11 +959,7 @@
                     : `rgba(0, 100, 255, ${Math.abs(gp.temperature) / 150})`;
                 ctx.fillRect(0, 0, w, h);
             }
-            // 粒子
-            if (gp.grain > 0) {
-                drawGrain(ctx, w, h, gp.grain);
-            }
-            // 周辺減光
+            if (gp.grain > 0) drawGrain(ctx, w, h, gp.grain);
             if (gp.vignette > 0) {
                 ctx.globalCompositeOperation = 'multiply';
                 const radius = Math.max(w, h) / 1.5;
@@ -850,29 +972,24 @@
             }
             ctx.restore();
 
-            // E. 選択範囲のUI枠線 (Export時、およびトリミングモード以外で表示)
-            // トリミングモードは上で独自に描画しているので除外
+            // 6. 選択範囲UI (Export時以外)
             if (!isExport && selectionState.active && currentMode !== 'crop') {
                 const r = selectionState.rect;
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 1.5 / viewState.scale;
                 ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
-                
                 ctx.strokeStyle = 'rgba(0,0,0,0.5)';
                 ctx.lineDashOffset = 5 / viewState.scale;
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
             }
         }
 
-        // ノイズ生成（再利用可能に）
         const grainCanvas = document.createElement('canvas');
         grainCanvas.width = 256; grainCanvas.height = 256;
         const grainCtx = grainCanvas.getContext('2d');
         
         function drawGrain(targetCtx, w, h, strength) {
-            // パターン更新（強度が変わった時だけ再生成してもいいが、簡易的に毎回やるか、あるいはキャッシュするか）
-            // ここでは簡易実装
             const imageData = grainCtx.createImageData(256, 256);
             const data = imageData.data;
             const alpha = (strength / 100) * 100; 
@@ -890,8 +1007,6 @@
         }
 
         // --- マウス操作 ---
-
-        // ビューリセット
         window.resetView = () => {
             if(!isImageLoaded || !baseImage) return;
             const containerW = dropZone.clientWidth;
@@ -911,7 +1026,6 @@
             window.zoomTimer = setTimeout(() => document.getElementById('zoom-indicator').style.opacity = '0', 1500);
         }
 
-        // ズーム
         dropZone.addEventListener('wheel', (e) => {
             if (!isImageLoaded) return;
             e.preventDefault();
@@ -920,7 +1034,6 @@
             updateCanvasTransform();
         }, { passive: false });
 
-        // マウスダウン
         canvas.addEventListener('mousedown', (e) => {
             if (!isImageLoaded) return;
             
@@ -937,12 +1050,11 @@
                 selectionState.startX = rawX;
                 selectionState.startY = rawY;
                 selectionState.rect = { x: rawX, y: rawY, w: 0, h: 0 };
-                selectionState.active = false; // ドラッグ開始時は非アクティブ化
+                selectionState.active = false; 
                 actionBar.classList.add('hidden');
             }
         });
 
-        // マウスムーブ
         window.addEventListener('mousemove', (e) => {
             if (!isImageLoaded) return;
 
@@ -973,7 +1085,6 @@
             }
         });
 
-        // マウスアップ
         window.addEventListener('mouseup', () => {
             if (viewState.isDragging) {
                 viewState.isDragging = false;
@@ -983,16 +1094,13 @@
                 selectionState.isSelecting = false;
                 if (selectionState.rect.w > 5 && selectionState.rect.h > 5) {
                     selectionState.active = true;
-                    // アクションバー表示
                     actionBar.classList.remove('hidden');
                     if (currentMode === 'crop') {
                         actionLabel.textContent = 'トリミング範囲';
-                        localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); // crop中はパネル無効のまま
+                        localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
                     } else {
                         actionLabel.textContent = '選択範囲';
-                        // 選択完了したらパラメータパネルを有効化
                         localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
-                        // パラメータリセット
                         resetParams(localParams);
                     }
                 } else {
@@ -1002,7 +1110,6 @@
             }
         });
 
-        // その他ユーティリティ
         function resetParams(paramsObj) {
             Object.keys(paramsObj).forEach(k => paramsObj[k] = 0);
             updateInputDisplays(paramsObj, paramsObj === localParams ? 'local' : '');
@@ -1021,8 +1128,6 @@
         downloadBtn.addEventListener('click', () => {
             if (!isImageLoaded) return;
             render(true);
-
-            // 日時スタンプ生成 (YYYYMMDD-HHmmss)
             const now = new Date();
             const y = now.getFullYear();
             const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -1039,15 +1144,11 @@
             render();
         });
 
-        // プリセット (全体補正のみリセットして適用)
         window.applyPreset = (type) => {
             if (!isImageLoaded) return;
-            
-            // リセット時の確認
             if (type === 'default') {
                 if (!confirm('現在の編集パラメータをリセットしますか？')) return;
             }
-
             resetParams(globalParams);
             switch(type) {
                 case 'bw': globalParams.saturation = -100; globalParams.contrast = 15; break;
@@ -1059,10 +1160,8 @@
             render();
         };
 
-        // 初期化
         updateInputDisplays(globalParams, '');
         updateInputDisplays(localParams, 'local');
-
     </script>
 </body>
 </html>
