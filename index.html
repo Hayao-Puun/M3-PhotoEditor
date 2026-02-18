@@ -8,80 +8,34 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         /* カスタムスクロールバー */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #171717; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #404040; 
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #525252; 
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #171717; }
+        ::-webkit-scrollbar-thumb { background: #404040; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #525252; }
 
         /* スライダー */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: transparent;
-        }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: #d4d4d4;
-            cursor: pointer;
-            margin-top: -6px;
-            box-shadow: 0 0 4px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #d4d4d4; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5); transition: transform 0.1s;
         }
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            background: #fff;
-        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); background: #fff; }
         input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #404040;
-            border-radius: 2px;
+            width: 100%; height: 4px; cursor: pointer; background: #404040; border-radius: 2px;
         }
-        input[type=range]:focus {
-            outline: none;
-        }
+        input[type=range]:focus { outline: none; }
 
         /* 数値入力 */
         input[type=number] {
-            background: transparent;
-            border: 1px solid transparent;
-            color: #737373;
-            font-family: monospace;
-            width: 3.5rem;
-            text-align: right;
-            border-radius: 4px;
-            padding: 0 4px;
-            -moz-appearance: textfield;
+            background: transparent; border: 1px solid transparent; color: #737373;
+            font-family: monospace; width: 3.5rem; text-align: right; border-radius: 4px;
+            padding: 0 4px; -moz-appearance: textfield;
         }
-        input[type=number]:hover {
-            border-color: #404040;
-            color: #d4d4d4;
-        }
-        input[type=number]:focus {
-            outline: none;
-            border-color: #d4d4d4;
-            color: #fff;
-            background: #262626;
-        }
+        input[type=number]:hover { border-color: #404040; color: #d4d4d4; }
+        input[type=number]:focus { outline: none; border-color: #d4d4d4; color: #fff; background: #262626; }
         input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
         /* キャンバス背景 */
         .canvas-container {
@@ -93,53 +47,35 @@
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
             background-color: #171717;
-            overflow: hidden;
-            position: relative;
+            overflow: hidden; position: relative;
         }
 
-        #editor-canvas {
-            transform-origin: center center;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-        }
+        #editor-canvas { transform-origin: center center; }
 
-        .tool-btn.active {
-            background-color: #e5e5e5;
-            color: #171717;
-        }
+        .tool-btn.active { background-color: #e5e5e5; color: #171717; }
 
         /* アニメーション */
-        @keyframes flash {
-            0% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        .flash-overlay {
-            animation: flash 0.5s ease-out forwards;
-        }
+        @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+        .flash-overlay { animation: flash 0.5s ease-out forwards; }
 
         /* チェックボックス */
         .custom-checkbox {
-            appearance: none;
-            background-color: #262626;
-            border: 1px solid #404040;
-            border-radius: 4px;
-            width: 16px;
-            height: 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            position: relative;
+            appearance: none; background-color: #262626; border: 1px solid #404040;
+            border-radius: 4px; width: 16px; height: 16px; display: inline-flex;
+            align-items: center; justify-content: center; cursor: pointer; position: relative;
         }
-        .custom-checkbox:checked {
-            background-color: #3b82f6;
-            border-color: #3b82f6;
+        .custom-checkbox:checked { background-color: #3b82f6; border-color: #3b82f6; }
+        .custom-checkbox:checked::after { content: '✔'; font-size: 10px; color: white; position: absolute; }
+
+        /* カスタムセレクト */
+        .custom-select {
+            appearance: none; background-color: #262626; border: 1px solid #404040;
+            color: #d4d4d4; padding: 4px 24px 4px 10px; border-radius: 6px; font-size: 12px;
+            cursor: pointer; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;
         }
-        .custom-checkbox:checked::after {
-            content: '✔';
-            font-size: 10px;
-            color: white;
-            position: absolute;
-        }
+        .custom-select:hover { border-color: #525252; color: #fff; }
+        .custom-select:focus { outline: none; border-color: #a3a3a3; }
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-300 font-sans h-screen flex flex-col overflow-hidden selection:bg-neutral-600 selection:text-white">
@@ -152,7 +88,7 @@
                 <span class="font-medium tracking-widest text-neutral-100 text-sm hidden sm:block">M3-PhotoEditor</span>
             </div>
             
-            <!-- 履歴操作 (Undo/Redo) -->
+            <!-- 履歴操作 -->
             <div class="flex items-center gap-1 ml-4 border-l border-neutral-700 pl-4">
                 <button onclick="undo()" id="btn-undo" class="w-8 h-8 rounded flex items-center justify-center transition hover:bg-neutral-800 text-neutral-400 disabled:opacity-30 disabled:cursor-not-allowed" title="元に戻す (Ctrl+Z)" disabled>
                     <i class="ph ph-arrow-u-up-left text-lg"></i>
@@ -164,24 +100,39 @@
         </div>
         
         <!-- ツールバー（中央） -->
-        <div class="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg border border-neutral-700 absolute left-1/2 transform -translate-x-1/2 shadow-lg z-30">
-            <button id="tool-hand" class="tool-btn active w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="移動・ズーム (Space)">
-                <i class="ph ph-hand-grabbing text-lg"></i>
-            </button>
-            <div class="w-px h-5 bg-neutral-600 mx-1"></div>
-            <button id="tool-select" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="矩形選択・部分補正 (Shiftで正方形)">
-                <i class="ph ph-selection-plus text-lg"></i>
-            </button>
-            <button id="tool-circle" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="円形選択・部分補正 (Shiftで正円)">
-                <i class="ph ph-circle-dashed text-lg"></i>
-            </button>
-            <button id="tool-crop" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="トリミング (C)">
-                <i class="ph ph-crop text-lg"></i>
-            </button>
-            <div class="w-px h-5 bg-neutral-600 mx-1"></div>
-            <button onclick="resetView()" class="w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="表示リセット (Fit)">
-                <i class="ph ph-corners-out text-lg"></i>
-            </button>
+        <div class="flex flex-col items-center absolute left-1/2 transform -translate-x-1/2 z-30 top-2">
+            <div class="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg border border-neutral-700 shadow-lg">
+                <button id="tool-hand" class="tool-btn active w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="移動・ズーム (Space)">
+                    <i class="ph ph-hand-grabbing text-lg"></i>
+                </button>
+                <div class="w-px h-5 bg-neutral-600 mx-1"></div>
+                <button id="tool-select" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="矩形選択・部分補正 (Shiftで正方形)">
+                    <i class="ph ph-selection-plus text-lg"></i>
+                </button>
+                <button id="tool-circle" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="円形選択・部分補正 (Shiftで正円)">
+                    <i class="ph ph-circle-dashed text-lg"></i>
+                </button>
+                <button id="tool-crop" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="トリミング (C)">
+                    <i class="ph ph-crop text-lg"></i>
+                </button>
+                <div class="w-px h-5 bg-neutral-600 mx-1"></div>
+                <button onclick="resetView()" class="w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="表示リセット (Fit)">
+                    <i class="ph ph-corners-out text-lg"></i>
+                </button>
+            </div>
+
+            <!-- クロップオプション -->
+            <div id="crop-options" class="mt-2 bg-neutral-900/90 backdrop-blur border border-neutral-700 rounded-lg p-1.5 flex items-center gap-2 hidden shadow-xl">
+                <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-bold px-1">Ratio</span>
+                <select id="aspect-ratio-select" class="custom-select">
+                    <option value="free">フリー</option>
+                    <option value="original">オリジナル</option>
+                    <option value="1:1">1:1 (正方形)</option>
+                    <option value="16:9">16:9</option>
+                    <option value="4:3">4:3</option>
+                    <option value="3:2">3:2</option>
+                </select>
+            </div>
         </div>
 
         <div class="flex items-center gap-4">
@@ -201,7 +152,7 @@
     <!-- メインエリア -->
     <div class="flex flex-1 overflow-hidden">
         
-        <!-- 左サイドバー（プリセット） -->
+        <!-- 左サイドバー -->
         <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-6 shrink-0 z-10 hidden sm:flex">
             <div class="group relative">
                 <button onclick="applyPreset('default')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition" title="パラメータリセット">
@@ -245,7 +196,7 @@
                 <canvas id="editor-canvas" class="hidden pointer-events-auto cursor-grab"></canvas>
             </div>
 
-            <!-- アクションバー（選択時・トリミング時のみ表示） -->
+            <!-- アクションバー -->
             <div id="action-bar" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 px-4 py-2 rounded-full shadow-xl flex items-center gap-3 border border-neutral-700 hidden z-30">
                 <span id="action-label" class="text-xs font-medium text-neutral-300 mr-2">範囲選択中</span>
                 <button onclick="applyCurrentAction()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1">
@@ -267,7 +218,7 @@
             </div>
         </main>
 
-        <!-- 右サイドバー（調整パネル） -->
+        <!-- 右サイドバー -->
         <aside class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col shrink-0 overflow-y-auto z-10 custom-scroll">
             
             <!-- 部分調整パネル -->
@@ -279,7 +230,6 @@
                     <span class="text-[10px] text-neutral-500 bg-neutral-800 px-2 py-0.5 rounded">選択範囲のみ</span>
                 </div>
                 
-                <!-- オーバーレイ（選択していない時は操作不可にする） -->
                 <div id="local-disabled-overlay" class="absolute inset-0 bg-neutral-900/80 z-20 flex items-center justify-center backdrop-blur-[1px] transition-opacity duration-300">
                     <p class="text-xs text-neutral-400 text-center px-4">
                         <i class="ph ph-cursor-click mb-1 block text-lg"></i>
@@ -287,13 +237,11 @@
                     </p>
                 </div>
 
-                <!-- 選択範囲の反転オプション -->
                 <div class="mb-5 flex items-center justify-between">
                     <label for="invert-mask" class="text-xs text-neutral-400 cursor-pointer select-none">選択範囲を反転 (外側に適用)</label>
                     <input type="checkbox" id="invert-mask" class="custom-checkbox" onchange="requestAnimationFrame(() => render())">
                 </div>
 
-                <!-- ぼかし -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">ぼかし</span>
@@ -302,7 +250,6 @@
                     <input type="range" id="localBlur" min="0" max="50" value="0" step="1" class="control-slider">
                 </div>
 
-                <!-- モザイク -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">モザイク</span>
@@ -320,7 +267,6 @@
             <div class="px-6 py-5 border-b border-neutral-800">
                 <h2 class="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Global Light & Color</h2>
                 
-                <!-- 露光量 -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">露光量</span>
@@ -329,7 +275,6 @@
                     <input type="range" id="brightness" min="-100" max="100" value="0" class="control-slider">
                 </div>
 
-                <!-- コントラスト -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">コントラスト</span>
@@ -338,7 +283,6 @@
                     <input type="range" id="contrast" min="-100" max="100" value="0" class="control-slider">
                 </div>
 
-                <!-- ハイライト -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">ハイライト</span>
@@ -347,7 +291,6 @@
                     <input type="range" id="highlights" min="-100" max="100" value="0" class="control-slider">
                 </div>
 
-                <!-- シャドウ -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">シャドウ</span>
@@ -356,7 +299,6 @@
                     <input type="range" id="shadows" min="-100" max="100" value="0" class="control-slider">
                 </div>
 
-                <!-- 彩度 -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">彩度</span>
@@ -365,7 +307,6 @@
                     <input type="range" id="saturation" min="-100" max="100" value="0" class="control-slider">
                 </div>
 
-                 <!-- 色温度 -->
                  <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">色温度</span>
@@ -379,7 +320,6 @@
             <div class="px-6 py-5">
                 <h2 class="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Global Effects</h2>
                 
-                <!-- 粒子 -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">粒子 (Grain)</span>
@@ -388,7 +328,6 @@
                     <input type="range" id="grain" min="0" max="100" value="0" class="control-slider">
                 </div>
 
-                 <!-- 周辺減光 -->
                  <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition">周辺減光 (Vignette)</span>
@@ -399,7 +338,7 @@
             </div>
 
             <div class="mt-auto p-6 text-center">
-                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor v2.4</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor v2.7</p>
                 <p class="text-[10px] text-neutral-600 mt-1">Created by Hayao</p>
             </div>
         </aside>
@@ -409,48 +348,34 @@
         // --- 状態管理クラス ---
         class HistoryManager {
             constructor() {
-                this.undoStack = [];
-                this.redoStack = [];
-                this.limit = 20;
+                this.undoStack = []; this.redoStack = []; this.limit = 20;
             }
-
             push(state) {
                 this.undoStack.push(state);
                 if (this.undoStack.length > this.limit) this.undoStack.shift();
-                this.redoStack = [];
-                this.updateButtons();
+                this.redoStack = []; this.updateButtons();
             }
-
             undo() {
                 if (this.undoStack.length <= 1) return null;
-                const current = this.undoStack.pop();
-                this.redoStack.push(current);
-                this.updateButtons();
-                return this.undoStack[this.undoStack.length - 1];
+                const current = this.undoStack.pop(); this.redoStack.push(current);
+                this.updateButtons(); return this.undoStack[this.undoStack.length - 1];
             }
-
             redo() {
                 if (this.redoStack.length === 0) return null;
-                const next = this.redoStack.pop();
-                this.undoStack.push(next);
-                this.updateButtons();
-                return next;
+                const next = this.redoStack.pop(); this.undoStack.push(next);
+                this.updateButtons(); return next;
             }
-
             updateButtons() {
                 document.getElementById('btn-undo').disabled = this.undoStack.length <= 1;
                 document.getElementById('btn-redo').disabled = this.redoStack.length === 0;
             }
-
-            reset() {
-                this.undoStack = [];
-                this.redoStack = [];
-                this.updateButtons();
-            }
+            reset() { this.undoStack = []; this.redoStack = []; this.updateButtons(); }
         }
 
         // --- メインロジック ---
         
+        const CANVAS_PAD = 60; // 余白サイズ
+
         // DOM要素
         const canvas = document.getElementById('editor-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -461,8 +386,10 @@
         const loadingOverlay = document.getElementById('loading');
         const dropZone = document.getElementById('drop-zone');
         const invertCheckbox = document.getElementById('invert-mask');
+        const cropOptions = document.getElementById('crop-options');
+        const aspectRatioSelect = document.getElementById('aspect-ratio-select');
         
-        // ツール関連DOM
+        // ツールDOM
         const toolBtns = {
             hand: document.getElementById('tool-hand'),
             select: document.getElementById('tool-select'),
@@ -476,11 +403,10 @@
         // アプリ状態
         const history = new HistoryManager();
         let isImageLoaded = false;
-        let currentMode = 'hand'; // 'hand' | 'select' | 'circle' | 'crop'
+        let currentMode = 'hand'; 
         let currentFileName = 'm3_photo_edited';
         
-        // 作業用変数
-        let baseImage = null; // 現在の履歴先端の画像
+        let baseImage = null; 
         
         let viewState = {
             scale: 1, x: 0, y: 0,
@@ -489,32 +415,45 @@
 
         let selectionState = {
             active: false,
-            isSelecting: false,
-            startX: 0, startY: 0,
-            shape: 'rect', // 'rect' | 'circle'
+            dragMode: null, 
+            startX: 0, startY: 0, 
+            initialRect: null, 
+            initialRotation: 0,
+            shape: 'rect',
+            rotation: 0,
             rect: { x: 0, y: 0, w: 0, h: 0 }
         };
 
-        // パラメータ (Global & Local)
         const globalParams = {
             brightness: 0, contrast: 0, saturation: 0,
             temperature: 0, grain: 0, vignette: 0,
-            highlights: 0, shadows: 0 // New
+            highlights: 0, shadows: 0
         };
-        
-        const localParams = {
-            blur: 0, mosaic: 0
+        const localParams = { blur: 0, mosaic: 0 };
+
+        // --- ビュー更新関数 ---
+        function updateCanvasTransform() {
+            canvas.style.transform = `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.scale})`;
+            const indicator = document.getElementById('zoom-indicator');
+            indicator.textContent = Math.round(viewState.scale * 100) + '%';
+            indicator.style.opacity = '1';
+            clearTimeout(window.zoomTimer);
+            window.zoomTimer = setTimeout(() => indicator.style.opacity = '0', 1500);
+        }
+
+        window.resetView = () => {
+            if(!isImageLoaded || !baseImage) return;
+            const containerW = dropZone.clientWidth; const containerH = dropZone.clientHeight;
+            const scaleW = (containerW - 64) / canvas.width; const scaleH = (containerH - 64) / canvas.height;
+            viewState.scale = Math.min(scaleW, scaleH, 1); viewState.x = 0; viewState.y = 0;
+            updateCanvasTransform();
         };
 
         // --- 初期化 & イベントリスナー ---
 
-        // モード切替
         function setMode(mode) {
             currentMode = mode;
-            
-            Object.keys(toolBtns).forEach(k => {
-                toolBtns[k].classList.toggle('active', k === mode);
-            });
+            Object.keys(toolBtns).forEach(k => toolBtns[k].classList.toggle('active', k === mode));
 
             if (mode === 'hand') {
                 canvas.style.cursor = 'grab';
@@ -527,6 +466,7 @@
 
             if (mode === 'select' || mode === 'circle') {
                 localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
+                cropOptions.classList.add('hidden'); 
             } else {
                 localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
             }
@@ -535,8 +475,10 @@
                  cancelAction();
                  localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
                  localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-crop mb-1 block text-lg"></i>トリミング範囲を選択して<br>「適用」を押してください';
+                 cropOptions.classList.remove('hidden'); 
             } else if (mode !== 'select' && mode !== 'circle') {
                  localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-cursor-click mb-1 block text-lg"></i>範囲選択ツールまたは<br>トリミングツールを使用してください';
+                 cropOptions.classList.add('hidden');
             }
         }
         
@@ -545,7 +487,6 @@
         toolBtns.circle.addEventListener('click', () => setMode('circle'));
         toolBtns.crop.addEventListener('click', () => setMode('crop'));
 
-        // パラメータ変更監視
         function getElementId(prefix, key) {
             if (!prefix) return key;
             return prefix + key.charAt(0).toUpperCase() + key.slice(1);
@@ -556,19 +497,16 @@
                 const id = getElementId(prefix, key);
                 const slider = document.getElementById(id);
                 const numInput = document.getElementById('num-' + id);
-
                 if (slider && numInput) {
                     slider.addEventListener('input', (e) => {
                         const val = parseFloat(e.target.value);
-                        paramsObj[key] = val;
-                        numInput.value = val;
+                        paramsObj[key] = val; numInput.value = val;
                         requestAnimationFrame(() => render());
                     });
                     numInput.addEventListener('input', (e) => {
                         let val = parseFloat(e.target.value);
                         if (isNaN(val)) return;
-                        paramsObj[key] = val;
-                        slider.value = val;
+                        paramsObj[key] = val; slider.value = val;
                         requestAnimationFrame(() => render());
                     });
                 }
@@ -577,47 +515,31 @@
         setupParamListeners(globalParams, '');
         setupParamListeners(localParams, 'local');
 
-        // ファイルアップロード
         uploadInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('bg-neutral-900'); });
         dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('bg-neutral-900'); });
         dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('bg-neutral-900');
+            e.preventDefault(); dropZone.classList.remove('bg-neutral-900');
             if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]);
         });
 
         function loadFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
             currentFileName = file.name.replace(/\.[^/.]+$/, "");
-
-            loadingOverlay.classList.remove('hidden');
-            loadingOverlay.classList.add('flex');
-
+            loadingOverlay.classList.remove('hidden'); loadingOverlay.classList.add('flex');
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = async () => {
                     baseImage = await createImageBitmap(img);
-                    canvas.width = baseImage.width;
-                    canvas.height = baseImage.height;
-                    
+                    canvas.width = baseImage.width + CANVAS_PAD * 2; 
+                    canvas.height = baseImage.height + CANVAS_PAD * 2;
                     isImageLoaded = true;
-                    placeholderMsg.style.display = 'none';
-                    canvas.classList.remove('hidden');
-                    downloadBtn.disabled = false;
-                    
-                    history.reset();
-                    saveHistoryState();
-
-                    resetView();
-                    setMode('hand');
-                    resetParams(globalParams);
-                    resetParams(localParams);
-                    invertCheckbox.checked = false; // Reset checkbox
-                    
-                    loadingOverlay.classList.add('hidden');
-                    loadingOverlay.classList.remove('flex');
+                    placeholderMsg.style.display = 'none'; canvas.classList.remove('hidden'); downloadBtn.disabled = false;
+                    history.reset(); saveHistoryState();
+                    resetView(); setMode('hand'); resetParams(globalParams); resetParams(localParams);
+                    invertCheckbox.checked = false;
+                    loadingOverlay.classList.add('hidden'); loadingOverlay.classList.remove('flex');
                     render();
                 };
                 img.src = e.target.result;
@@ -625,542 +547,455 @@
             reader.readAsDataURL(file);
         }
 
-        // --- コア機能: 履歴管理 ---
         async function saveHistoryState() {
             const tmpCanvas = document.createElement('canvas');
-            tmpCanvas.width = baseImage.width;
-            tmpCanvas.height = baseImage.height;
+            tmpCanvas.width = baseImage.width; tmpCanvas.height = baseImage.height;
             const tmpCtx = tmpCanvas.getContext('2d');
             tmpCtx.drawImage(baseImage, 0, 0);
             const imageData = tmpCtx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
-            
-            const state = {
-                imageData: imageData,
-                globalParams: { ...globalParams }
-            };
-            history.push(state);
+            history.push({ imageData: imageData, globalParams: { ...globalParams } });
         }
 
         async function restoreState(state) {
             if (!state) return;
             baseImage = await createImageBitmap(state.imageData);
-            canvas.width = baseImage.width;
-            canvas.height = baseImage.height;
+            canvas.width = baseImage.width + CANVAS_PAD * 2; 
+            canvas.height = baseImage.height + CANVAS_PAD * 2;
             Object.assign(globalParams, state.globalParams);
-            updateInputDisplays(globalParams, '');
-            resetParams(localParams);
-            cancelAction();
-            resetView();
-            render();
+            updateInputDisplays(globalParams, ''); resetParams(localParams);
+            cancelAction(); resetView(); render();
         }
 
         window.undo = async () => { const state = history.undo(); if (state) await restoreState(state); };
         window.redo = async () => { const state = history.redo(); if (state) await restoreState(state); };
 
-        // --- コア機能: 適用(Apply) ---
         window.applyCurrentAction = async () => {
             if (!selectionState.active) return;
-            loadingOverlay.classList.remove('hidden');
-            loadingOverlay.classList.add('flex');
-
+            loadingOverlay.classList.remove('hidden'); loadingOverlay.classList.add('flex');
             setTimeout(async () => {
-                if (currentMode === 'select' || currentMode === 'circle') {
-                    await applyLocalEffect();
-                } else if (currentMode === 'crop') {
-                    await applyCrop();
-                }
-                
-                loadingOverlay.classList.add('hidden');
-                loadingOverlay.classList.remove('flex');
-                
+                if (currentMode === 'select' || currentMode === 'circle') await applyLocalEffect();
+                else if (currentMode === 'crop') await applyCrop();
+                loadingOverlay.classList.add('hidden'); loadingOverlay.classList.remove('flex');
                 const flash = document.createElement('div');
                 flash.className = 'absolute inset-0 bg-white pointer-events-none flash-overlay z-50';
                 document.body.appendChild(flash);
                 setTimeout(() => flash.remove(), 500);
-
             }, 10);
         };
 
         window.cancelAction = () => {
-            selectionState.active = false;
-            selectionState.rect = { x: 0, y: 0, w: 0, h: 0 };
-            actionBar.classList.add('hidden');
-            resetParams(localParams);
-            invertCheckbox.checked = false;
-            render();
+            selectionState.active = false; selectionState.rect = { x: 0, y: 0, w: 0, h: 0 }; selectionState.rotation = 0;
+            actionBar.classList.add('hidden'); resetParams(localParams); invertCheckbox.checked = false; render();
         };
 
-        // 部分補正の焼き付け
+        function rotatePoint(x, y, cx, cy, angle) {
+            const cos = Math.cos(angle); const sin = Math.sin(angle);
+            const dx = x - cx; const dy = y - cy;
+            return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+        }
+
         async function applyLocalEffect() {
             const tmpCanvas = document.createElement('canvas');
-            tmpCanvas.width = baseImage.width;
-            tmpCanvas.height = baseImage.height;
+            tmpCanvas.width = baseImage.width; tmpCanvas.height = baseImage.height;
             const tmpCtx = tmpCanvas.getContext('2d');
-            
-            const w = tmpCanvas.width;
-            const h = tmpCanvas.height;
-            const rect = selectionState.rect;
-            const params = localParams;
+            const w = tmpCanvas.width; const h = tmpCanvas.height;
+            const rect = selectionState.rect; const params = localParams;
             const isInvert = invertCheckbox.checked;
+            const rotation = selectionState.rotation;
+
+            const cx = rect.x - CANVAS_PAD + rect.w / 2;
+            const cy = rect.y - CANVAS_PAD + rect.h / 2;
+            const adjRectX = rect.x - CANVAS_PAD;
+            const adjRectY = rect.y - CANVAS_PAD;
 
             if (params.mosaic > 0 || params.blur > 0) {
-                // 1. まずベース画像を描画
                 tmpCtx.drawImage(baseImage, 0, 0);
-
-                // 2. 「効果付き」画像を別キャンバスに用意
                 const effectCanvas = document.createElement('canvas');
                 effectCanvas.width = w; effectCanvas.height = h;
                 const effectCtx = effectCanvas.getContext('2d');
                 effectCtx.drawImage(baseImage, 0, 0);
                 
-                // ぼかし適用
                 if (params.blur > 0) {
                     const blurCanvas = document.createElement('canvas');
                     blurCanvas.width = w; blurCanvas.height = h;
                     const bCtx = blurCanvas.getContext('2d');
                     bCtx.filter = `blur(${params.blur}px)`;
                     bCtx.drawImage(effectCanvas, 0, 0);
-                    effectCtx.clearRect(0, 0, w, h);
-                    effectCtx.drawImage(blurCanvas, 0, 0);
+                    effectCtx.clearRect(0, 0, w, h); effectCtx.drawImage(blurCanvas, 0, 0);
                 }
                 
-                // モザイク適用
                 if (params.mosaic > 0) {
                     const mosaicFactor = Math.max(0.005, 1 - (params.mosaic / 105));
-                    const sw = Math.floor(w * mosaicFactor);
-                    const sh = Math.floor(h * mosaicFactor);
-                    
+                    const sw = Math.floor(w * mosaicFactor); const sh = Math.floor(h * mosaicFactor);
                     const offC = document.createElement('canvas');
-                    offC.width = Math.max(1, sw);
-                    offC.height = Math.max(1, sh);
+                    offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
                     const offCtx = offC.getContext('2d');
                     offCtx.drawImage(effectCanvas, 0, 0, offC.width, offC.height);
-                    
                     effectCtx.imageSmoothingEnabled = false;
                     effectCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
                     effectCtx.imageSmoothingEnabled = true;
                 }
 
-                // 3. マスク処理による合成
                 tmpCtx.save();
+                tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
                 tmpCtx.beginPath();
-                
-                // 形状によるパス作成
                 if (selectionState.shape === 'circle') {
-                    const cx = rect.x + rect.w / 2;
-                    const cy = rect.y + rect.h / 2;
-                    const rx = Math.abs(rect.w / 2);
-                    const ry = Math.abs(rect.h / 2);
-                    tmpCtx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+                    tmpCtx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
                 } else {
-                    tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
+                    tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); 
                 }
 
                 if (isInvert) {
-                    // 反転: 全体に効果をかけて、選択範囲内だけ元画像を上書きする
-                    tmpCtx.restore(); // パスは作ったがクリップはまだ
-                    tmpCtx.clearRect(0, 0, w, h);
-                    tmpCtx.drawImage(effectCanvas, 0, 0); // 全体がエフェクト
-                    
-                    // 選択範囲だけ元画像を上書き
+                    tmpCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    tmpCtx.clearRect(0, 0, w, h); tmpCtx.drawImage(effectCanvas, 0, 0);
                     tmpCtx.save();
+                    tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
                     tmpCtx.beginPath();
                     if (selectionState.shape === 'circle') {
-                        const cx = rect.x + rect.w / 2;
-                        const cy = rect.y + rect.h / 2;
-                        const rx = Math.abs(rect.w / 2);
-                        const ry = Math.abs(rect.h / 2);
-                        tmpCtx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-                    } else {
-                        tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
-                    }
+                        tmpCtx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
+                    } else { tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); }
                     tmpCtx.clip();
-                    tmpCtx.drawImage(baseImage, 0, 0); // 内部を元に戻す
-                    tmpCtx.restore();
+                    tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
+                    tmpCtx.drawImage(baseImage, 0, 0); tmpCtx.restore();
                 } else {
-                    // 通常: 選択範囲内をクリップして効果画像を描く
                     tmpCtx.clip();
-                    tmpCtx.drawImage(effectCanvas, 0, 0);
-                    tmpCtx.restore();
+                    tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
+                    tmpCtx.drawImage(effectCanvas, 0, 0); tmpCtx.restore();
                 }
+                tmpCtx.restore();
             }
-            
             baseImage = await createImageBitmap(tmpCanvas);
-            await saveHistoryState();
-            cancelAction();
+            await saveHistoryState(); cancelAction();
         }
 
         async function applyCrop() {
             const rect = selectionState.rect;
+            const rotation = selectionState.rotation;
             if (rect.w < 1 || rect.h < 1) return;
             
-            const x = Math.max(0, rect.x);
-            const y = Math.max(0, rect.y);
-            const w = Math.min(rect.w, baseImage.width - x);
-            const h = Math.min(rect.h, baseImage.height - y);
-            
-            if (w <= 0 || h <= 0) return;
+            const cx = rect.x - CANVAS_PAD + rect.w / 2;
+            const cy = rect.y - CANVAS_PAD + rect.h / 2;
+            const w = Math.abs(rect.w);
+            const h = Math.abs(rect.h);
 
-            baseImage = await createImageBitmap(baseImage, x, y, w, h);
-            canvas.width = w;
-            canvas.height = h;
-            
-            await saveHistoryState();
-            cancelAction();
-            resetView();
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = w; cropCanvas.height = h;
+            const cCtx = cropCanvas.getContext('2d');
+
+            cCtx.translate(w / 2, h / 2);
+            cCtx.rotate(-rotation);
+            cCtx.drawImage(baseImage, -cx, -cy);
+
+            baseImage = await createImageBitmap(cropCanvas);
+            canvas.width = w + CANVAS_PAD * 2; 
+            canvas.height = h + CANVAS_PAD * 2;
+            await saveHistoryState(); cancelAction(); resetView();
         }
 
-        // --- ハイライト・シャドウ処理 (ピクセル操作) ---
         function applyHighlightsShadows(ctx, width, height, highlights, shadows) {
             if (highlights === 0 && shadows === 0) return;
-            
-            const imgData = ctx.getImageData(0, 0, width, height);
-            const data = imgData.data;
-            const len = data.length;
-
-            // 定数化して高速化
-            // 修正: ハイライトをプラスにすると明るくなるように正負を反転させない
-            const hFactor = highlights / 100;  // 正=ハイライトを上げる
-            const sFactor = shadows / 100;     // 正=シャドウを上げる
-
+            const imgData = ctx.getImageData(CANVAS_PAD, CANVAS_PAD, baseImage.width, baseImage.height);
+            const data = imgData.data; const len = data.length;
+            const hFactor = highlights / 100; const sFactor = shadows / 100;
             for (let i = 0; i < len; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-
-                // 輝度計算
-                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                const normLum = lum / 255;
-
+                const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
+                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b; const normLum = lum / 255;
                 let adj = 0;
-
-                // ハイライト調整
-                if (highlights !== 0) {
-                    const mask = normLum * normLum * normLum; 
-                    adj += mask * hFactor * 255;
-                }
-
-                // シャドウ調整
-                if (shadows !== 0) {
-                    const mask = (1 - normLum) * (1 - normLum) * (1 - normLum);
-                    adj += mask * sFactor * 255;
-                }
-
+                if (highlights !== 0) { const mask = normLum * normLum * normLum; adj += mask * hFactor * 255; }
+                if (shadows !== 0) { const mask = (1 - normLum) * (1 - normLum) * (1 - normLum); adj += mask * sFactor * 255; }
                 if (adj !== 0) {
                     data[i] = Math.max(0, Math.min(255, r + adj));
                     data[i + 1] = Math.max(0, Math.min(255, g + adj));
                     data[i + 2] = Math.max(0, Math.min(255, b + adj));
                 }
             }
-            ctx.putImageData(imgData, 0, 0);
+            ctx.putImageData(imgData, CANVAS_PAD, CANVAS_PAD);
         }
 
-        // --- 描画ループ ---
         function render(isExport = false) {
             if (!isImageLoaded || !baseImage) return;
-
-            const w = canvas.width;
-            const h = canvas.height;
-            const gp = globalParams;
-
+            const w = canvas.width; const h = canvas.height; const gp = globalParams;
             ctx.clearRect(0, 0, w, h);
             
-            // 1. ベース描画と基本フィルタ
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20; 
+            
             let filterStr = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
-            ctx.filter = filterStr;
-            ctx.drawImage(baseImage, 0, 0);
+            ctx.filter = filterStr; 
+            ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); 
             ctx.filter = 'none';
+            ctx.shadowBlur = 0;
 
-            // 2. ハイライト・シャドウ (ピクセル操作)
-            if (gp.highlights !== 0 || gp.shadows !== 0) {
-                applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
-            }
+            if (gp.highlights !== 0 || gp.shadows !== 0) applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
 
-            // 3. 部分補正プレビュー
             if (selectionState.active && (currentMode === 'select' || currentMode === 'circle')) {
-                const lp = localParams;
-                const rect = selectionState.rect;
-                const isInvert = invertCheckbox.checked;
-                
+                const lp = localParams; const rect = selectionState.rect; const isInvert = invertCheckbox.checked;
+                const rotation = selectionState.rotation;
+                const cx = rect.x + rect.w / 2; const cy = rect.y + rect.h / 2;
+
                 if (lp.mosaic > 0 || lp.blur > 0) {
-                    const effectCanvas = document.createElement('canvas');
-                    effectCanvas.width = w; effectCanvas.height = h;
-                    const eCtx = effectCanvas.getContext('2d');
-                    eCtx.drawImage(canvas, 0, 0); // 現在のCanvasをコピー
+                    const imgW = baseImage.width; const imgH = baseImage.height;
+                    const eC = document.createElement('canvas'); eC.width = imgW; eC.height = imgH;
+                    const eCtx = eC.getContext('2d'); 
+                    eCtx.drawImage(canvas, CANVAS_PAD, CANVAS_PAD, imgW, imgH, 0, 0, imgW, imgH);
 
-                    // ぼかし
                     if (lp.blur > 0) {
-                        const bC = document.createElement('canvas');
-                        bC.width = w; bC.height = h;
-                        const bCtx = bC.getContext('2d');
-                        bCtx.filter = `blur(${lp.blur}px)`;
-                        bCtx.drawImage(effectCanvas, 0, 0);
-                        eCtx.clearRect(0,0,w,h);
-                        eCtx.drawImage(bC, 0, 0);
+                        const bC = document.createElement('canvas'); bC.width = imgW; bC.height = imgH;
+                        const bCtx = bC.getContext('2d'); bCtx.filter = `blur(${lp.blur}px)`;
+                        bCtx.drawImage(eC, 0, 0); eCtx.clearRect(0,0,imgW,imgH); eCtx.drawImage(bC, 0, 0);
                     }
-                    // モザイク
                     if (lp.mosaic > 0) {
-                        const mosaicFactor = Math.max(0.005, 1 - (lp.mosaic / 105));
-                        const sw = Math.floor(w * mosaicFactor);
-                        const sh = Math.floor(h * mosaicFactor);
-                        const offC = document.createElement('canvas');
-                        offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
-                        const offCtx = offC.getContext('2d');
-                        offCtx.drawImage(eCtx.canvas, 0, 0, offC.width, offC.height);
-                        eCtx.imageSmoothingEnabled = false;
-                        eCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
-                        eCtx.imageSmoothingEnabled = true;
+                        const sw = Math.floor(imgW * Math.max(0.005, 1 - (lp.mosaic / 105)));
+                        const sh = Math.floor(imgH * Math.max(0.005, 1 - (lp.mosaic / 105)));
+                        const offC = document.createElement('canvas'); offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
+                        const offCtx = offC.getContext('2d'); offCtx.drawImage(eCtx.canvas, 0, 0, offC.width, offC.height);
+                        eCtx.imageSmoothingEnabled = false; eCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, imgW, imgH); eCtx.imageSmoothingEnabled = true;
                     }
 
-                    // 合成
+                    ctx.save();
+                    ctx.translate(cx, cy); ctx.rotate(rotation); ctx.translate(-cx, -cy);
+                    ctx.beginPath();
+                    if (selectionState.shape === 'circle') {
+                        ctx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
+                    } else { ctx.rect(rect.x, rect.y, rect.w, rect.h); }
+                    
                     if (isInvert) {
-                        ctx.drawImage(effectCanvas, 0, 0); // 全体エフェクト
+                        ctx.restore(); 
                         ctx.save();
-                        ctx.beginPath();
-                        
-                        if (selectionState.shape === 'circle') {
-                            const cx = rect.x + rect.w / 2;
-                            const cy = rect.y + rect.h / 2;
-                            const rx = Math.abs(rect.w / 2);
-                            const ry = Math.abs(rect.h / 2);
-                            ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-                        } else {
-                            ctx.rect(rect.x, rect.y, rect.w, rect.h);
-                        }
-                        
-                        ctx.clip();
-                        
-                        // 元の状態を再描画
-                        ctx.filter = filterStr;
-                        ctx.drawImage(baseImage, 0, 0);
-                        ctx.filter = 'none';
-                        if (gp.highlights !== 0 || gp.shadows !== 0) {
-                             applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
-                        }
+                        ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD); 
                         ctx.restore();
-                        
+
+                        ctx.save();
+                        ctx.translate(cx, cy); ctx.rotate(rotation); ctx.translate(-cx, -cy);
+                        ctx.beginPath();
+                        if (selectionState.shape === 'circle') { ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI); }
+                        else { ctx.rect(rect.x, rect.y, rect.w, rect.h); }
+                        ctx.clip();
+                        ctx.translate(cx, cy); ctx.rotate(-rotation); ctx.translate(-cx, -cy);
+                        ctx.filter = filterStr; ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); ctx.filter = 'none';
+                        if (gp.highlights !== 0 || gp.shadows !== 0) applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
                     } else {
-                        // 通常
-                        ctx.save();
-                        ctx.beginPath();
-                        
-                        if (selectionState.shape === 'circle') {
-                            const cx = rect.x + rect.w / 2;
-                            const cy = rect.y + rect.h / 2;
-                            const rx = Math.abs(rect.w / 2);
-                            const ry = Math.abs(rect.h / 2);
-                            ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-                        } else {
-                            ctx.rect(rect.x, rect.y, rect.w, rect.h);
-                        }
-                        
                         ctx.clip();
-                        ctx.drawImage(effectCanvas, 0, 0);
-                        ctx.restore();
+                        ctx.translate(cx, cy); ctx.rotate(-rotation); ctx.translate(-cx, -cy);
+                        ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD);
                     }
+                    ctx.restore();
                 }
             }
 
-            // 4. トリミングプレビュー（白枠のみ）
-            if (selectionState.active && currentMode === 'crop') {
-                if (!isExport) {
-                    const r = selectionState.rect;
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2 / viewState.scale;
-                    ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]); 
-                    ctx.strokeRect(r.x, r.y, r.w, r.h);
-                    ctx.setLineDash([]);
-                }
+            if (selectionState.active && currentMode === 'crop' && !isExport) {
+                const r = selectionState.rect;
+                const rot = selectionState.rotation;
+                const cx = r.x + r.w/2; const cy = r.y + r.h/2;
+                ctx.save();
+                ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 / viewState.scale;
+                ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]);
+                ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.setLineDash([]);
+                drawHandles(ctx, r);
+                ctx.restore();
             }
 
-            // 5. オーバーレイエフェクト (Grain, Color Temp, Vignette)
             ctx.save();
             if (gp.temperature !== 0) {
                 ctx.globalCompositeOperation = 'overlay';
-                ctx.fillStyle = gp.temperature > 0 
-                    ? `rgba(255, 160, 0, ${Math.abs(gp.temperature) / 150})`
-                    : `rgba(0, 100, 255, ${Math.abs(gp.temperature) / 150})`;
-                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = gp.temperature > 0 ? `rgba(255, 160, 0, ${Math.abs(gp.temperature) / 150})` : `rgba(0, 100, 255, ${Math.abs(gp.temperature) / 150})`;
+                ctx.fillRect(CANVAS_PAD, CANVAS_PAD, baseImage.width, baseImage.height);
             }
-            if (gp.grain > 0) drawGrain(ctx, w, h, gp.grain);
+            if (gp.grain > 0) drawGrain(ctx, baseImage.width, baseImage.height, gp.grain, CANVAS_PAD, CANVAS_PAD);
             if (gp.vignette > 0) {
                 ctx.globalCompositeOperation = 'multiply';
-                const radius = Math.max(w, h) / 1.5;
-                const gradient = ctx.createRadialGradient(w/2, h/2, radius * 0.4, w/2, h/2, radius);
-                const alpha = gp.vignette / 100;
-                gradient.addColorStop(0, 'rgba(0,0,0,0)');
-                gradient.addColorStop(1, `rgba(0,0,0,${alpha})`);
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, w, h);
+                const iw = baseImage.width; const ih = baseImage.height;
+                const r = Math.max(iw, ih) / 1.5;
+                const g = ctx.createRadialGradient(CANVAS_PAD + iw/2, CANVAS_PAD + ih/2, r * 0.4, CANVAS_PAD + iw/2, CANVAS_PAD + ih/2, r);
+                g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${gp.vignette / 100})`);
+                ctx.fillStyle = g; ctx.fillRect(CANVAS_PAD, CANVAS_PAD, iw, ih);
             }
             ctx.restore();
 
-            // 6. 選択範囲UI (Export時以外)
             if (!isExport && selectionState.active && currentMode !== 'crop') {
                 const r = selectionState.rect;
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 1.5 / viewState.scale;
-                ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
-                
+                const rot = selectionState.rotation;
+                const cx = r.x + r.w/2; const cy = r.y + r.h/2;
+                ctx.save();
+                ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5 / viewState.scale; ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
                 if (selectionState.shape === 'circle') {
-                    const cx = r.x + r.w / 2;
-                    const cy = r.y + r.h / 2;
-                    const rx = Math.abs(r.w / 2);
-                    const ry = Math.abs(r.h / 2);
-                    ctx.beginPath();
-                    ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-                    ctx.stroke();
-                } else {
-                    ctx.strokeRect(r.x, r.y, r.w, r.h);
-                }
-                
-                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-                ctx.lineDashOffset = 5 / viewState.scale;
-                
+                    ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke();
+                } else { ctx.strokeRect(r.x, r.y, r.w, r.h); }
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineDashOffset = 5 / viewState.scale;
                 if (selectionState.shape === 'circle') {
-                    const cx = r.x + r.w / 2;
-                    const cy = r.y + r.h / 2;
-                    const rx = Math.abs(r.w / 2);
-                    const ry = Math.abs(r.h / 2);
-                    ctx.beginPath();
-                    ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-                    ctx.stroke();
-                } else {
-                    ctx.strokeRect(r.x, r.y, r.w, r.h);
-                }
+                    ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke();
+                } else { ctx.strokeRect(r.x, r.y, r.w, r.h); }
+                drawHandles(ctx, r);
+                ctx.restore();
             }
         }
 
-        const grainCanvas = document.createElement('canvas');
-        grainCanvas.width = 256; grainCanvas.height = 256;
-        const grainCtx = grainCanvas.getContext('2d');
-        
-        function drawGrain(targetCtx, w, h, strength) {
-            const imageData = grainCtx.createImageData(256, 256);
-            const data = imageData.data;
-            const alpha = (strength / 100) * 100; 
+        function drawHandles(ctx, rect) {
+            const handleSize = 8 / viewState.scale;
+            ctx.fillStyle = 'white'; ctx.strokeStyle = 'black'; ctx.lineWidth = 1 / viewState.scale;
+            const x = rect.x, y = rect.y, w = rect.w, h = rect.h;
+            const handles = [
+                {x: x, y: y}, {x: x + w, y: y}, {x: x + w, y: y + h}, {x: x, y: y + h}
+            ];
+            handles.forEach(h => {
+                ctx.fillRect(h.x - handleSize/2, h.y - handleSize/2, handleSize, handleSize);
+                ctx.strokeRect(h.x - handleSize/2, h.y - handleSize/2, handleSize, handleSize);
+            });
 
+            const cx = x + w / 2;
+            const rotHandleY = y - 25 / viewState.scale;
+            ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, rotHandleY); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, rotHandleY, 5 / viewState.scale, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+        }
+
+        function drawGrain(targetCtx, w, h, strength, offsetX = 0, offsetY = 0) {
+            const imageData = grainCtx.createImageData(256, 256); const data = imageData.data;
+            const alpha = (strength / 100) * 100;
             for (let i = 0; i < data.length; i += 4) {
                 const val = (Math.random() - 0.5) * alpha;
                 data[i] = 128 + val; data[i+1] = 128 + val; data[i+2] = 128 + val; data[i+3] = 255;
             }
             grainCtx.putImageData(imageData, 0, 0);
-
             targetCtx.globalCompositeOperation = 'overlay';
             targetCtx.fillStyle = targetCtx.createPattern(grainCanvas, 'repeat');
-            targetCtx.fillRect(0, 0, w, h);
-            targetCtx.globalCompositeOperation = 'source-over';
+            targetCtx.fillRect(offsetX, offsetY, w, h); targetCtx.globalCompositeOperation = 'source-over';
         }
+        const grainCanvas = document.createElement('canvas'); grainCanvas.width = 256; grainCanvas.height = 256;
+        const grainCtx = grainCanvas.getContext('2d');
 
         // --- マウス操作 ---
-        window.resetView = () => {
-            if(!isImageLoaded || !baseImage) return;
-            const containerW = dropZone.clientWidth;
-            const containerH = dropZone.clientHeight;
-            const scaleW = (containerW - 64) / baseImage.width;
-            const scaleH = (containerH - 64) / baseImage.height;
-            viewState.scale = Math.min(scaleW, scaleH, 1);
-            viewState.x = 0; viewState.y = 0;
-            updateCanvasTransform();
-        };
+        dropZone.addEventListener('wheel', (e) => {
+            if (!isImageLoaded) return; e.preventDefault();
+            const newScale = viewState.scale * (1 - e.deltaY * 0.001);
+            viewState.scale = Math.min(Math.max(newScale, 0.05), 50); updateCanvasTransform();
+        }, { passive: false });
 
-        function updateCanvasTransform() {
-            canvas.style.transform = `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.scale})`;
-            document.getElementById('zoom-indicator').textContent = Math.round(viewState.scale * 100) + '%';
-            document.getElementById('zoom-indicator').style.opacity = '1';
-            clearTimeout(window.zoomTimer);
-            window.zoomTimer = setTimeout(() => document.getElementById('zoom-indicator').style.opacity = '0', 1500);
+        function getHandleUnderMouse(mx, my) {
+            if (!selectionState.active) return null;
+            const r = selectionState.rect;
+            const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
+            const angle = -selectionState.rotation;
+            const p = rotatePoint(mx, my, cx, cy, angle);
+            const handleSize = 10 / viewState.scale; 
+            if (Math.abs(p.x - r.x) < handleSize && Math.abs(p.y - r.y) < handleSize) return 'tl';
+            if (Math.abs(p.x - (r.x + r.w)) < handleSize && Math.abs(p.y - r.y) < handleSize) return 'tr';
+            if (Math.abs(p.x - (r.x + r.w)) < handleSize && Math.abs(p.y - (r.y + r.h)) < handleSize) return 'br';
+            if (Math.abs(p.x - r.x) < handleSize && Math.abs(p.y - (r.y + r.h)) < handleSize) return 'bl';
+            const rotHandleY = r.y - 25 / viewState.scale;
+            if (Math.abs(p.x - cx) < handleSize && Math.abs(p.y - rotHandleY) < handleSize) return 'rotate';
+            return null;
         }
 
-        dropZone.addEventListener('wheel', (e) => {
-            if (!isImageLoaded) return;
-            e.preventDefault();
-            const newScale = viewState.scale * (1 - e.deltaY * 0.001);
-            viewState.scale = Math.min(Math.max(newScale, 0.05), 50);
-            updateCanvasTransform();
-        }, { passive: false });
+        function isInsideRect(mx, my) {
+            if (!selectionState.active) return false;
+            const r = selectionState.rect;
+            const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
+            const angle = -selectionState.rotation;
+            const p = rotatePoint(mx, my, cx, cy, angle);
+            return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+        }
+
+        function getAspectRatio() {
+            const val = aspectRatioSelect.value;
+            if (val === 'free') return null;
+            if (val === 'original') return baseImage.width / baseImage.height;
+            const parts = val.split(':'); return parseFloat(parts[0]) / parseFloat(parts[1]);
+        }
 
         canvas.addEventListener('mousedown', (e) => {
             if (!isImageLoaded) return;
-            
             if (currentMode === 'hand' || e.button === 1 || e.spaceKey) {
-                viewState.isDragging = true;
-                viewState.lastX = e.clientX;
-                viewState.lastY = e.clientY;
-                canvas.style.cursor = 'grabbing';
-            } else if (currentMode === 'select' || currentMode === 'circle' || currentMode === 'crop') {
-                selectionState.isSelecting = true;
-                const rect = canvas.getBoundingClientRect();
-                const rawX = (e.clientX - rect.left) / viewState.scale;
-                const rawY = (e.clientY - rect.top) / viewState.scale;
-                selectionState.startX = rawX;
-                selectionState.startY = rawY;
-                selectionState.rect = { x: rawX, y: rawY, w: 0, h: 0 };
-                // 円形モードなら shape を circle に、それ以外（矩形選択またはトリミング）なら rect に
-                selectionState.shape = (currentMode === 'circle') ? 'circle' : 'rect';
-                selectionState.active = false; 
-                actionBar.classList.add('hidden');
+                viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY;
+                canvas.style.cursor = 'grabbing'; return;
             }
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) / viewState.scale;
+            const my = (e.clientY - rect.top) / viewState.scale;
+            const handle = getHandleUnderMouse(mx, my);
+            if (handle) {
+                selectionState.dragMode = (handle === 'rotate') ? 'rotate' : 'resize-' + handle;
+                selectionState.active = true;
+            } else if (isInsideRect(mx, my)) {
+                selectionState.dragMode = 'move'; selectionState.active = true;
+            } else {
+                selectionState.dragMode = 'create'; selectionState.active = false; 
+                selectionState.shape = (currentMode === 'circle') ? 'circle' : 'rect';
+                selectionState.rotation = 0; actionBar.classList.add('hidden');
+            }
+            selectionState.startX = mx; selectionState.startY = my;
+            selectionState.initialRect = { ...selectionState.rect };
+            selectionState.initialRotation = selectionState.rotation;
+            if (selectionState.dragMode === 'create') { selectionState.rect = { x: mx, y: my, w: 0, h: 0 }; }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!isImageLoaded) return;
-
             if (viewState.isDragging) {
-                const dx = e.clientX - viewState.lastX;
-                const dy = e.clientY - viewState.lastY;
-                viewState.x += dx;
-                viewState.y += dy;
-                viewState.lastX = e.clientX;
-                viewState.lastY = e.clientY;
-                updateCanvasTransform();
-            } else if (selectionState.isSelecting) {
-                const rect = canvas.getBoundingClientRect();
-                const currentX = (e.clientX - rect.left) / viewState.scale;
-                const currentY = (e.clientY - rect.top) / viewState.scale;
-                
-                let w = currentX - selectionState.startX;
-                let h = currentY - selectionState.startY;
-
-                // Shiftキーで正方形/正円に固定
-                if (e.shiftKey) {
-                    const size = Math.max(Math.abs(w), Math.abs(h));
-                    w = w >= 0 ? size : -size;
-                    h = h >= 0 ? size : -size;
-                }
-
-                selectionState.rect = {
-                    x: w > 0 ? selectionState.startX : selectionState.startX + w,
-                    y: h > 0 ? selectionState.startY : selectionState.startY + h,
-                    w: Math.abs(w),
-                    h: Math.abs(h)
-                };
-                selectionState.active = true;
-                render();
+                const dx = e.clientX - viewState.lastX; const dy = e.clientY - viewState.lastY;
+                viewState.x += dx; viewState.y += dy; viewState.lastX = e.clientX; viewState.lastY = e.clientY;
+                updateCanvasTransform(); return;
             }
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) / viewState.scale;
+            const my = (e.clientY - rect.top) / viewState.scale;
+            const handle = getHandleUnderMouse(mx, my);
+            if (handle) canvas.style.cursor = (handle === 'rotate') ? 'alias' : (handle === 'tl' || handle === 'br') ? 'nwse-resize' : 'nesw-resize';
+            else if (isInsideRect(mx, my)) canvas.style.cursor = 'move';
+            else canvas.style.cursor = 'crosshair';
+
+            if (!selectionState.dragMode) return;
+            if (selectionState.dragMode === 'rotate') {
+                const r = selectionState.rect;
+                const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
+                const angle = Math.atan2(my - cy, mx - cx);
+                selectionState.rotation = angle + Math.PI / 2;
+                render(); return;
+            }
+            const r = selectionState.initialRect;
+            const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
+            const angle = -selectionState.rotation;
+            const p = rotatePoint(mx, my, cx, cy, angle);
+            const startP = rotatePoint(selectionState.startX, selectionState.startY, cx, cy, angle);
+
+            if (selectionState.dragMode === 'move') {
+                const dx = p.x - startP.x; const dy = p.y - startP.y;
+                selectionState.rect.x = selectionState.initialRect.x + dx;
+                selectionState.rect.y = selectionState.initialRect.y + dy;
+            } else if (selectionState.dragMode === 'create') {
+                let w = mx - selectionState.startX; let h = my - selectionState.startY;
+                const ratio = (currentMode === 'crop') ? getAspectRatio() : null;
+                if (ratio) { if (Math.abs(w / ratio) < Math.abs(h)) h = w / ratio; else w = h * ratio; }
+                else if (e.shiftKey) { const size = Math.max(Math.abs(w), Math.abs(h)); w = w >= 0 ? size : -size; h = h >= 0 ? size : -size; }
+                selectionState.rect = { x: w > 0 ? selectionState.startX : selectionState.startX + w, y: h > 0 ? selectionState.startY : selectionState.startY + h, w: Math.abs(w), h: Math.abs(h) };
+                selectionState.active = true;
+            } else if (selectionState.dragMode.startsWith('resize')) {
+                const type = selectionState.dragMode.split('-')[1];
+                const initR = selectionState.initialRect;
+                let newX = initR.x, newY = initR.y, newW = initR.w, newH = initR.h;
+                if (type === 'br') { newW = p.x - newX; newH = p.y - newY; }
+                else if (type === 'bl') { newW = (initR.x + initR.w) - p.x; newX = p.x; newH = p.y - newY; }
+                else if (type === 'tr') { newW = p.x - newX; newH = (initR.y + initR.h) - p.y; newY = p.y; }
+                else if (type === 'tl') { newW = (initR.x + initR.w) - p.x; newX = p.x; newH = (initR.y + initR.h) - p.y; newY = p.y; }
+                const ratio = (currentMode === 'crop') ? getAspectRatio() : null;
+                if (ratio) { newH = newW / ratio; if (type.includes('t')) newY = (initR.y + initR.h) - newH; }
+                else if (e.shiftKey) { const size = Math.max(Math.abs(newW), Math.abs(newH)); newW = size; newH = size; }
+                selectionState.rect = { x: newX, y: newY, w: Math.abs(newW), h: Math.abs(newH) };
+            }
+            render();
         });
 
         window.addEventListener('mouseup', () => {
             if (viewState.isDragging) {
-                viewState.isDragging = false;
-                canvas.style.cursor = currentMode === 'hand' ? 'grab' : 'crosshair';
+                viewState.isDragging = false; canvas.style.cursor = currentMode === 'hand' ? 'grab' : 'crosshair';
             }
-            if (selectionState.isSelecting) {
-                selectionState.isSelecting = false;
+            if (selectionState.dragMode) {
+                selectionState.dragMode = null;
                 if (selectionState.rect.w > 5 && selectionState.rect.h > 5) {
-                    selectionState.active = true;
-                    actionBar.classList.remove('hidden');
-                    if (currentMode === 'crop') {
-                        actionLabel.textContent = 'トリミング範囲';
-                        localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
-                    } else {
-                        actionLabel.textContent = '選択範囲';
-                        localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
-                        resetParams(localParams);
-                    }
-                } else {
-                    selectionState.active = false;
-                }
+                    selectionState.active = true; actionBar.classList.remove('hidden');
+                    if (currentMode === 'crop') { actionLabel.textContent = 'トリミング範囲'; localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); }
+                    else { actionLabel.textContent = '選択範囲'; localPanelOverlay.classList.add('opacity-0', 'pointer-events-none'); resetParams(localParams); }
+                } else { selectionState.active = false; }
                 render();
             }
         });
@@ -1169,41 +1004,23 @@
             Object.keys(paramsObj).forEach(k => paramsObj[k] = 0);
             updateInputDisplays(paramsObj, paramsObj === localParams ? 'local' : '');
         }
-
         function updateInputDisplays(paramsObj, prefix) {
             Object.keys(paramsObj).forEach(key => {
                 const id = getElementId(prefix, key);
-                const slider = document.getElementById(id);
-                const num = document.getElementById('num-' + id);
-                if (slider) slider.value = paramsObj[key];
-                if (num) num.value = paramsObj[key];
+                const slider = document.getElementById(id); const num = document.getElementById('num-' + id);
+                if (slider) slider.value = paramsObj[key]; if (num) num.value = paramsObj[key];
             });
         }
-
         downloadBtn.addEventListener('click', () => {
-            if (!isImageLoaded) return;
-            render(true);
+            if (!isImageLoaded) return; render(true);
             const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            const h = String(now.getHours()).padStart(2, '0');
-            const min = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            const timestamp = `${y}${m}${d}-${h}${min}${s}`;
-
-            const link = document.createElement('a');
-            link.download = `${currentFileName}-${timestamp}.png`;
-            link.href = canvas.toDataURL('image/png', 0.9);
-            link.click();
-            render();
+            const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+            const link = document.createElement('a'); link.download = `${currentFileName}-${ts}.png`;
+            link.href = canvas.toDataURL('image/png', 0.9); link.click(); render();
         });
-
         window.applyPreset = (type) => {
             if (!isImageLoaded) return;
-            if (type === 'default') {
-                if (!confirm('現在の編集パラメータをリセットしますか？')) return;
-            }
+            if (type === 'default' && !confirm('リセットしますか？')) return;
             resetParams(globalParams);
             switch(type) {
                 case 'bw': globalParams.saturation = -100; globalParams.contrast = 15; break;
@@ -1211,12 +1028,9 @@
                 case 'cool': globalParams.temperature = -30; globalParams.contrast = 10; break;
                 case 'film': globalParams.contrast = -10; globalParams.brightness = 5; globalParams.saturation = -20; globalParams.temperature = 10; globalParams.grain = 30; globalParams.vignette = 40; break;
             }
-            updateInputDisplays(globalParams, '');
-            render();
+            updateInputDisplays(globalParams, ''); render();
         };
-
-        updateInputDisplays(globalParams, '');
-        updateInputDisplays(localParams, 'local');
+        updateInputDisplays(globalParams, ''); updateInputDisplays(localParams, 'local');
     </script>
 </body>
 </html>
