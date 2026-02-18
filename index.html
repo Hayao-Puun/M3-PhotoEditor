@@ -366,35 +366,45 @@
         // --- 状態管理クラス ---
         class HistoryManager {
             constructor() {
-                this.undoStack = []; this.redoStack = []; this.limit = 20;
+                this.undoStack = []; this.redoStack = []; this.limit = 25;
             }
             push(state) {
-                this.undoStack.push(state);
+                // 深いコピーでパラメータを保存
+                const safeState = {
+                    imageData: state.imageData,
+                    globalParams: JSON.parse(JSON.stringify(state.globalParams))
+                };
+                this.undoStack.push(safeState);
                 if (this.undoStack.length > this.limit) this.undoStack.shift();
-                this.redoStack = []; this.updateButtons();
+                this.redoStack = []; 
+                this.updateButtons();
             }
             undo() {
                 if (this.undoStack.length <= 1) return null;
-                const current = this.undoStack.pop(); this.redoStack.push(current);
-                this.updateButtons(); return this.undoStack[this.undoStack.length - 1];
+                const current = this.undoStack.pop(); 
+                this.redoStack.push(current);
+                this.updateButtons(); 
+                return this.undoStack[this.undoStack.length - 1];
             }
             redo() {
                 if (this.redoStack.length === 0) return null;
-                const next = this.redoStack.pop(); this.undoStack.push(next);
-                this.updateButtons(); return next;
+                const next = this.redoStack.pop(); 
+                this.undoStack.push(next);
+                this.updateButtons(); 
+                return next;
             }
             updateButtons() {
-                document.getElementById('btn-undo').disabled = this.undoStack.length <= 1;
-                document.getElementById('btn-redo').disabled = this.redoStack.length === 0;
+                const uBtn = document.getElementById('btn-undo');
+                const rBtn = document.getElementById('btn-redo');
+                if (uBtn) uBtn.disabled = this.undoStack.length <= 1;
+                if (rBtn) rBtn.disabled = this.redoStack.length === 0;
             }
             reset() { this.undoStack = []; this.redoStack = []; this.updateButtons(); }
         }
 
         // --- メインロジック ---
-        
-        const CANVAS_PAD = 80; // 余白サイズ
+        const CANVAS_PAD = 80; 
 
-        // DOM要素
         const canvas = document.getElementById('editor-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const canvasWrapper = document.getElementById('canvas-wrapper');
@@ -407,7 +417,6 @@
         const cropOptions = document.getElementById('crop-options');
         const aspectRatioSelect = document.getElementById('aspect-ratio-select');
         
-        // ツールDOM
         const toolBtns = {
             hand: document.getElementById('tool-hand'),
             select: document.getElementById('tool-select'),
@@ -418,39 +427,18 @@
         const actionLabel = document.getElementById('action-label');
         const localPanelOverlay = document.getElementById('local-disabled-overlay');
 
-        // アプリ状態
         const history = new HistoryManager();
         let isImageLoaded = false;
         let currentMode = 'hand'; 
         let currentFileName = 'photo_edited';
-        
         let baseImage = null; 
         
-        let viewState = {
-            scale: 1, x: 0, y: 0,
-            isDragging: false, lastX: 0, lastY: 0
-        };
+        let viewState = { scale: 1, x: 0, y: 0, isDragging: false, lastX: 0, lastY: 0 };
+        let selectionState = { active: false, dragMode: null, startX: 0, startY: 0, initialRect: null, initialRotation: 0, anchorGlobal: null, shape: 'rect', rotation: 0, rect: { x: 0, y: 0, w: 0, h: 0 } };
 
-        let selectionState = {
-            active: false,
-            dragMode: null, // 'create', 'move', 'resize-tl'..., 'rotate'
-            startX: 0, startY: 0, 
-            initialRect: null, 
-            initialRotation: 0,
-            anchorGlobal: null, // リサイズ時の固定点
-            shape: 'rect',
-            rotation: 0, 
-            rect: { x: 0, y: 0, w: 0, h: 0 }
-        };
-
-        const globalParams = {
-            brightness: 0, contrast: 0, saturation: 0,
-            temperature: 0, grain: 0, vignette: 0,
-            highlights: 0, shadows: 0
-        };
+        const globalParams = { brightness: 0, contrast: 0, saturation: 0, temperature: 0, grain: 0, vignette: 0, highlights: 0, shadows: 0 };
         const localParams = { blur: 0, mosaic: 0 };
 
-        // --- ビュー更新関数 ---
         function updateCanvasTransform() {
             canvas.style.transform = `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.scale})`;
             const indicator = document.getElementById('zoom-indicator');
@@ -468,37 +456,15 @@
             updateCanvasTransform();
         };
 
-        // --- 初期化 & イベントリスナー ---
-
         function setMode(mode) {
             currentMode = mode;
             Object.keys(toolBtns).forEach(k => toolBtns[k].classList.toggle('active', k === mode));
-
-            if (mode === 'hand') {
-                canvas.style.cursor = 'grab';
-                canvasWrapper.style.cursor = 'grab';
-                cancelAction(); 
-            } else {
-                canvas.style.cursor = 'crosshair';
-                canvasWrapper.style.cursor = 'crosshair';
-            }
-
-            if (mode === 'select' || mode === 'circle') {
-                localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
-                cropOptions.classList.add('hidden'); 
-            } else {
-                localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
-            }
-            
-            if (mode === 'crop') {
-                 cancelAction();
-                 localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
-                 localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-crop mb-1 block text-lg"></i>トリミング範囲を選択して<br>「適用」を押してください';
-                 cropOptions.classList.remove('hidden'); 
-            } else if (mode !== 'select' && mode !== 'circle') {
-                 localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-cursor-click mb-1 block text-lg"></i>範囲選択ツールまたは<br>トリミングツールを使用してください';
-                 cropOptions.classList.add('hidden');
-            }
+            if (mode === 'hand') { canvas.style.cursor = 'grab'; canvasWrapper.style.cursor = 'grab'; cancelAction(); } 
+            else { canvas.style.cursor = 'crosshair'; canvasWrapper.style.cursor = 'crosshair'; }
+            if (mode === 'select' || mode === 'circle') { localPanelOverlay.classList.add('opacity-0', 'pointer-events-none'); cropOptions.classList.add('hidden'); } 
+            else { localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); }
+            if (mode === 'crop') { cancelAction(); localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-crop mb-1 block text-lg"></i>トリミング範囲を選択して<br>「適用」を押してください'; cropOptions.classList.remove('hidden'); } 
+            else if (mode !== 'select' && mode !== 'circle') { localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-cursor-click mb-1 block text-lg"></i>範囲選択ツールまたは<br>トリミングツールを使用してください'; cropOptions.classList.add('hidden'); }
         }
         
         toolBtns.hand.addEventListener('click', () => setMode('hand'));
@@ -506,28 +472,33 @@
         toolBtns.circle.addEventListener('click', () => setMode('circle'));
         toolBtns.crop.addEventListener('click', () => setMode('crop'));
 
-        function getElementId(prefix, key) {
-            if (!prefix) return key;
-            return prefix + key.charAt(0).toUpperCase() + key.slice(1);
-        }
+        function getElementId(prefix, key) { return prefix ? prefix + key.charAt(0).toUpperCase() + key.slice(1) : key; }
 
         function setupParamListeners(paramsObj, prefix) {
             Object.keys(paramsObj).forEach(key => {
                 const id = getElementId(prefix, key);
-                const slider = document.getElementById(id);
-                const numInput = document.getElementById('num-' + id);
+                const slider = document.getElementById(id); const numInput = document.getElementById('num-' + id);
                 if (slider && numInput) {
                     slider.addEventListener('input', (e) => {
-                        const val = parseFloat(e.target.value);
-                        paramsObj[key] = val; numInput.value = val;
+                        paramsObj[key] = parseFloat(e.target.value); numInput.value = e.target.value;
                         requestAnimationFrame(() => render());
                     });
+                    // 手を離した時に履歴を保存 (グローバルパラメータのみ)
+                    if (!prefix) {
+                        slider.addEventListener('change', () => {
+                            if (isImageLoaded) saveHistoryState();
+                        });
+                    }
                     numInput.addEventListener('input', (e) => {
-                        let val = parseFloat(e.target.value);
-                        if (isNaN(val)) return;
+                        let val = parseFloat(e.target.value); if (isNaN(val)) return;
                         paramsObj[key] = val; slider.value = val;
                         requestAnimationFrame(() => render());
                     });
+                    if (!prefix) {
+                        numInput.addEventListener('change', () => {
+                            if (isImageLoaded) saveHistoryState();
+                        });
+                    }
                 }
             });
         }
@@ -535,12 +506,8 @@
         setupParamListeners(localParams, 'local');
 
         uploadInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('bg-neutral-900'); });
-        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('bg-neutral-900'); });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault(); dropZone.classList.remove('bg-neutral-900');
-            if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]);
-        });
+        dropZone.addEventListener('dragover', (e) => e.preventDefault());
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]); });
 
         function loadFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
@@ -551,13 +518,11 @@
                 const img = new Image();
                 img.onload = async () => {
                     baseImage = await createImageBitmap(img);
-                    canvas.width = baseImage.width + CANVAS_PAD * 2; 
-                    canvas.height = baseImage.height + CANVAS_PAD * 2;
-                    isImageLoaded = true;
-                    placeholderMsg.style.display = 'none'; canvas.classList.remove('hidden'); downloadBtn.disabled = false;
-                    history.reset(); saveHistoryState();
+                    canvas.width = baseImage.width + CANVAS_PAD * 2; canvas.height = baseImage.height + CANVAS_PAD * 2;
+                    isImageLoaded = true; placeholderMsg.style.display = 'none'; canvas.classList.remove('hidden'); downloadBtn.disabled = false;
+                    history.reset(); 
+                    saveHistoryState();
                     resetView(); setMode('hand'); resetParams(globalParams); resetParams(localParams);
-                    invertCheckbox.checked = false;
                     loadingOverlay.classList.add('hidden'); loadingOverlay.classList.remove('flex');
                     render();
                 };
@@ -567,22 +532,24 @@
         }
 
         async function saveHistoryState() {
+            if (!isImageLoaded) return;
             const tmpCanvas = document.createElement('canvas');
             tmpCanvas.width = baseImage.width; tmpCanvas.height = baseImage.height;
             const tmpCtx = tmpCanvas.getContext('2d');
             tmpCtx.drawImage(baseImage, 0, 0);
             const imageData = tmpCtx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
-            history.push({ imageData: imageData, globalParams: { ...globalParams } });
+            history.push({ imageData: imageData, globalParams: JSON.parse(JSON.stringify(globalParams)) });
         }
 
         async function restoreState(state) {
             if (!state) return;
             baseImage = await createImageBitmap(state.imageData);
-            canvas.width = baseImage.width + CANVAS_PAD * 2; 
-            canvas.height = baseImage.height + CANVAS_PAD * 2;
-            Object.assign(globalParams, state.globalParams);
-            updateInputDisplays(globalParams, ''); resetParams(localParams);
-            cancelAction(); resetView(); render();
+            canvas.width = baseImage.width + CANVAS_PAD * 2; canvas.height = baseImage.height + CANVAS_PAD * 2;
+            Object.assign(globalParams, JSON.parse(JSON.stringify(state.globalParams)));
+            updateInputDisplays(globalParams, ''); 
+            resetParams(localParams);
+            cancelAction(); 
+            render();
         }
 
         window.undo = async () => { const state = history.undo(); if (state) await restoreState(state); };
@@ -621,62 +588,38 @@
             const rect = selectionState.rect; const params = localParams;
             const isInvert = invertCheckbox.checked;
             const rotation = selectionState.rotation;
-
-            const cx = rect.x - CANVAS_PAD + rect.w / 2;
-            const cy = rect.y - CANVAS_PAD + rect.h / 2;
-            const adjRectX = rect.x - CANVAS_PAD;
-            const adjRectY = rect.y - CANVAS_PAD;
+            const cx = rect.x - CANVAS_PAD + rect.w / 2; const cy = rect.y - CANVAS_PAD + rect.h / 2;
+            const adjRectX = rect.x - CANVAS_PAD; const adjRectY = rect.y - CANVAS_PAD;
 
             if (params.mosaic > 0 || params.blur > 0) {
                 tmpCtx.drawImage(baseImage, 0, 0);
-                const effectCanvas = document.createElement('canvas');
-                effectCanvas.width = w; effectCanvas.height = h;
-                const effectCtx = effectCanvas.getContext('2d');
-                effectCtx.drawImage(baseImage, 0, 0);
-                
+                const effectCanvas = document.createElement('canvas'); effectCanvas.width = w; effectCanvas.height = h;
+                const effectCtx = effectCanvas.getContext('2d'); effectCtx.drawImage(baseImage, 0, 0);
                 if (params.blur > 0) {
-                    const blurCanvas = document.createElement('canvas');
-                    blurCanvas.width = w; blurCanvas.height = h;
-                    const bCtx = blurCanvas.getContext('2d');
-                    bCtx.filter = `blur(${params.blur}px)`;
-                    bCtx.drawImage(effectCanvas, 0, 0);
-                    effectCtx.clearRect(0, 0, w, h); effectCtx.drawImage(blurCanvas, 0, 0);
+                    const bC = document.createElement('canvas'); bC.width = w; bC.height = h;
+                    const bCtx = bC.getContext('2d'); bCtx.filter = `blur(${params.blur}px)`;
+                    bCtx.drawImage(effectCanvas, 0, 0); effectCtx.clearRect(0,0,w,h); effectCtx.drawImage(bC, 0, 0);
                 }
-                
                 if (params.mosaic > 0) {
-                    const mosaicFactor = Math.max(0.005, 1 - (params.mosaic / 105));
-                    const sw = Math.floor(w * mosaicFactor); const sh = Math.floor(h * mosaicFactor);
-                    const offC = document.createElement('canvas');
-                    offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
-                    const offCtx = offC.getContext('2d');
-                    offCtx.drawImage(effectCanvas, 0, 0, offC.width, offC.height);
-                    effectCtx.imageSmoothingEnabled = false;
-                    effectCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
-                    effectCtx.imageSmoothingEnabled = true;
+                    const sF = Math.max(0.005, 1 - (params.mosaic / 105)); const sw = Math.floor(w * sF); const sh = Math.floor(h * sF);
+                    const offC = document.createElement('canvas'); offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
+                    const offCtx = offC.getContext('2d'); offCtx.drawImage(effectCanvas, 0, 0, offC.width, offC.height);
+                    effectCtx.imageSmoothingEnabled = false; effectCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h); effectCtx.imageSmoothingEnabled = true;
                 }
-
-                tmpCtx.save();
-                tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
+                tmpCtx.save(); tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
                 tmpCtx.beginPath();
-                if (selectionState.shape === 'circle') {
-                    tmpCtx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
-                } else { tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); }
-
+                if (selectionState.shape === 'circle') tmpCtx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
+                else tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); 
                 if (isInvert) {
-                    tmpCtx.setTransform(1, 0, 0, 1, 0, 0);
-                    tmpCtx.clearRect(0, 0, w, h); tmpCtx.drawImage(effectCanvas, 0, 0);
-                    tmpCtx.save();
-                    tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
+                    tmpCtx.setTransform(1, 0, 0, 1, 0, 0); tmpCtx.clearRect(0, 0, w, h); tmpCtx.drawImage(effectCanvas, 0, 0);
+                    tmpCtx.save(); tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
                     tmpCtx.beginPath();
-                    if (selectionState.shape === 'circle') {
-                        tmpCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
-                    } else { tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); }
-                    tmpCtx.clip();
-                    tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
+                    if (selectionState.shape === 'circle') tmpCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
+                    else tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h);
+                    tmpCtx.clip(); tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
                     tmpCtx.drawImage(baseImage, 0, 0); tmpCtx.restore();
                 } else {
-                    tmpCtx.clip();
-                    tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
+                    tmpCtx.clip(); tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
                     tmpCtx.drawImage(effectCanvas, 0, 0); tmpCtx.restore();
                 }
                 tmpCtx.restore();
@@ -686,25 +629,15 @@
         }
 
         async function applyCrop() {
-            const rect = selectionState.rect;
-            const rotation = selectionState.rotation;
+            const rect = selectionState.rect; const rotation = selectionState.rotation;
             if (rect.w < 1 || rect.h < 1) return;
-            
-            const cx = rect.x - CANVAS_PAD + rect.w / 2;
-            const cy = rect.y - CANVAS_PAD + rect.h / 2;
-            const w = Math.abs(rect.w);
-            const h = Math.abs(rect.h);
-
-            const cropCanvas = document.createElement('canvas');
-            cropCanvas.width = w; cropCanvas.height = h;
+            const cx = rect.x - CANVAS_PAD + rect.w / 2; const cy = rect.y - CANVAS_PAD + rect.h / 2;
+            const w = Math.abs(rect.w); const h = Math.abs(rect.h);
+            const cropCanvas = document.createElement('canvas'); cropCanvas.width = w; cropCanvas.height = h;
             const cCtx = cropCanvas.getContext('2d');
-            cCtx.translate(w / 2, h / 2);
-            cCtx.rotate(-rotation);
-            cCtx.drawImage(baseImage, -cx, -cy);
-
+            cCtx.translate(w / 2, h / 2); cCtx.rotate(-rotation); cCtx.drawImage(baseImage, -cx, -cy);
             baseImage = await createImageBitmap(cropCanvas);
-            canvas.width = w + CANVAS_PAD * 2; 
-            canvas.height = h + CANVAS_PAD * 2;
+            canvas.width = w + CANVAS_PAD * 2; canvas.height = h + CANVAS_PAD * 2;
             await saveHistoryState(); cancelAction(); resetView();
         }
 
@@ -712,18 +645,10 @@
             if (highlights === 0 && shadows === 0) return;
             const imgData = ctx.getImageData(CANVAS_PAD, CANVAS_PAD, baseImage.width, baseImage.height);
             const data = imgData.data; const len = data.length;
-            const hFactor = highlights / 100; const sFactor = shadows / 100;
             for (let i = 0; i < len; i += 4) {
-                const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
-                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b; const normLum = lum / 255;
-                let adj = 0;
-                if (highlights !== 0) { const mask = normLum * normLum * normLum; adj += mask * hFactor * 255; }
-                if (shadows !== 0) { const mask = (1 - normLum) * (1 - normLum) * (1 - normLum); adj += mask * sFactor * 255; }
-                if (adj !== 0) {
-                    data[i] = Math.max(0, Math.min(255, r + adj));
-                    data[i + 1] = Math.max(0, Math.min(255, g + adj));
-                    data[i + 2] = Math.max(0, Math.min(255, b + adj));
-                }
+                const lum = 0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2]; const nL = lum / 255;
+                let adj = (highlights !== 0 ? nL*nL*nL * (highlights/100) * 255 : 0) + (shadows !== 0 ? Math.pow(1-nL,3) * (shadows/100) * 255 : 0);
+                if (adj !== 0) { data[i] = Math.max(0,Math.min(255,data[i]+adj)); data[i+1] = Math.max(0,Math.min(255,data[i+1]+adj)); data[i+2] = Math.max(0,Math.min(255,data[i+2]+adj)); }
             }
             ctx.putImageData(imgData, CANVAS_PAD, CANVAS_PAD);
         }
@@ -732,148 +657,94 @@
             if (!isImageLoaded || !baseImage) return;
             const w = canvas.width; const h = canvas.height; const gp = globalParams;
             ctx.clearRect(0, 0, w, h);
-            
-            if (!isExport) {
-                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20; 
-            }
-            
-            let filterStr = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
-            ctx.filter = filterStr; 
-            ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); 
-            ctx.filter = 'none';
-            ctx.shadowBlur = 0;
-
+            if (!isExport) { ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20; }
+            ctx.filter = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
+            ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); ctx.filter = 'none'; ctx.shadowBlur = 0;
             if (gp.highlights !== 0 || gp.shadows !== 0) applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
 
             if (selectionState.active && (currentMode === 'select' || currentMode === 'circle')) {
                 const lp = localParams; const rect = selectionState.rect; const isInvert = invertCheckbox.checked;
-                const rotation = selectionState.rotation;
-                const cx = rect.x + rect.w / 2; const cy = rect.y + rect.h / 2;
-
+                const rot = selectionState.rotation; const cx = rect.x + rect.w/2; const cy = rect.y + rect.h/2;
                 if (lp.mosaic > 0 || lp.blur > 0) {
-                    const imgW = baseImage.width; const imgH = baseImage.height;
-                    const eC = document.createElement('canvas'); eC.width = imgW; eC.height = imgH;
-                    const eCtx = eC.getContext('2d'); eCtx.drawImage(canvas, CANVAS_PAD, CANVAS_PAD, imgW, imgH, 0, 0, imgW, imgH);
-
+                    const eC = document.createElement('canvas'); eC.width = baseImage.width; eC.height = baseImage.height;
+                    const eCtx = eC.getContext('2d'); eCtx.drawImage(canvas, CANVAS_PAD, CANVAS_PAD, baseImage.width, baseImage.height, 0, 0, baseImage.width, baseImage.height);
                     if (lp.blur > 0) {
-                        const bC = document.createElement('canvas'); bC.width = imgW; bC.height = imgH;
-                        const bCtx = bC.getContext('2d'); bCtx.filter = `blur(${lp.blur}px)`;
-                        bCtx.drawImage(eC, 0, 0); eCtx.clearRect(0,0,imgW,imgH); eCtx.drawImage(bC, 0, 0);
+                        const bC = document.createElement('canvas'); bC.width = eC.width; bC.height = eC.height;
+                        const bCtx = bC.getContext('2d'); bCtx.filter = `blur(${lp.blur}px)`; bCtx.drawImage(eC,0,0); eCtx.clearRect(0,0,eC.width,eC.height); eCtx.drawImage(bC,0,0);
                     }
                     if (lp.mosaic > 0) {
-                        const sw = Math.floor(imgW * Math.max(0.005, 1 - (lp.mosaic / 105)));
-                        const sh = Math.floor(imgH * Math.max(0.005, 1 - (lp.mosaic / 105)));
-                        const offC = document.createElement('canvas'); offC.width = Math.max(1, sw); offC.height = Math.max(1, sh);
-                        const offCtx = offC.getContext('2d'); offCtx.drawImage(eCtx.canvas, 0, 0, offC.width, offC.height);
-                        eCtx.imageSmoothingEnabled = false; eCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, imgW, imgH); eCtx.imageSmoothingEnabled = true;
+                        const sF = Math.max(0.005, 1-(lp.mosaic/105)); const offC = document.createElement('canvas'); offC.width=Math.max(1,eC.width*sF); offC.height=Math.max(1,eC.height*sF);
+                        const offCtx = offC.getContext('2d'); offCtx.drawImage(eCtx.canvas,0,0,offC.width,offC.height); eCtx.imageSmoothingEnabled=false; eCtx.drawImage(offC,0,0,offC.width,offC.height,0,0,eC.width,eC.height); eCtx.imageSmoothingEnabled=true;
                     }
-
-                    ctx.save();
-                    ctx.translate(cx, cy); ctx.rotate(rotation); ctx.translate(-cx, -cy);
+                    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
                     ctx.beginPath();
-                    if (selectionState.shape === 'circle') {
-                        ctx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
-                    } else { ctx.rect(rect.x, rect.y, rect.w, rect.h); }
-                    
+                    if (selectionState.shape === 'circle') ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
+                    else ctx.rect(rect.x, rect.y, rect.w, rect.h);
                     if (isInvert) {
                         ctx.restore(); ctx.save(); ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD); ctx.restore();
-                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rotation); ctx.translate(-cx, -cy);
-                        ctx.beginPath();
-                        if (selectionState.shape === 'circle') { ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI); }
-                        else { ctx.rect(rect.x, rect.y, rect.w, rect.h); }
-                        ctx.clip();
-                        ctx.translate(cx, cy); ctx.rotate(-rotation); ctx.translate(-cx, -cy);
-                        ctx.filter = filterStr; ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); ctx.filter = 'none';
-                        if (gp.highlights !== 0 || gp.shadows !== 0) applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
+                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy); ctx.beginPath();
+                        if (selectionState.shape === 'circle') ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI); else ctx.rect(rect.x, rect.y, rect.w, rect.h);
+                        ctx.clip(); ctx.translate(cx, cy); ctx.rotate(-rot); ctx.translate(-cx, -cy);
+                        ctx.drawImage(canvas, 0, 0); 
                     } else {
-                        ctx.clip(); ctx.translate(cx, cy); ctx.rotate(-rotation); ctx.translate(-cx, -cy);
-                        ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD);
+                        ctx.clip(); ctx.translate(cx, cy); ctx.rotate(-rot); ctx.translate(-cx, -cy); ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD);
                     }
                     ctx.restore();
                 }
             }
-
             if (selectionState.active && currentMode === 'crop' && !isExport) {
                 const r = selectionState.rect; const rot = selectionState.rotation;
-                const cx = r.x + r.w/2; const cy = r.y + r.h/2;
-                ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
+                ctx.save(); ctx.translate(r.x+r.w/2, r.y+r.h/2); ctx.rotate(rot); ctx.translate(-(r.x+r.w/2), -(r.y+r.h/2));
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 / viewState.scale; ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]);
-                ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.setLineDash([]);
-                drawHandles(ctx, r); ctx.restore();
+                ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.setLineDash([]); drawHandles(ctx, r); ctx.restore();
             }
-
             ctx.save();
             if (gp.temperature !== 0) {
-                ctx.globalCompositeOperation = 'overlay';
-                ctx.fillStyle = gp.temperature > 0 ? `rgba(255, 160, 0, ${Math.abs(gp.temperature) / 150})` : `rgba(0, 100, 255, ${Math.abs(gp.temperature) / 150})`;
+                ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = gp.temperature > 0 ? `rgba(255, 160, 0, ${Math.abs(gp.temperature)/150})` : `rgba(0, 100, 255, ${Math.abs(gp.temperature)/150})`;
                 ctx.fillRect(CANVAS_PAD, CANVAS_PAD, baseImage.width, baseImage.height);
             }
             if (gp.grain > 0) drawGrain(ctx, baseImage.width, baseImage.height, gp.grain, CANVAS_PAD, CANVAS_PAD);
             if (gp.vignette > 0) {
-                ctx.globalCompositeOperation = 'multiply';
-                const iw = baseImage.width; const ih = baseImage.height;
-                const r = Math.max(iw, ih) / 1.5;
-                const g = ctx.createRadialGradient(CANVAS_PAD + iw/2, CANVAS_PAD + ih/2, r * 0.4, CANVAS_PAD + iw/2, CANVAS_PAD + ih/2, r);
-                g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${gp.vignette / 100})`);
+                ctx.globalCompositeOperation = 'multiply'; const iw = baseImage.width, ih = baseImage.height, r = Math.max(iw, ih)/1.5;
+                const g = ctx.createRadialGradient(CANVAS_PAD+iw/2, CANVAS_PAD+ih/2, r * 0.4, CANVAS_PAD+iw/2, CANVAS_PAD+ih/2, r);
+                g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${gp.vignette/100})`);
                 ctx.fillStyle = g; ctx.fillRect(CANVAS_PAD, CANVAS_PAD, iw, ih);
             }
             ctx.restore();
-
             if (!isExport && selectionState.active && currentMode !== 'crop') {
-                const r = selectionState.rect; const rot = selectionState.rotation;
-                const cx = r.x + r.w/2; const cy = r.y + r.h/2;
+                const r = selectionState.rect; const rot = selectionState.rotation; const cx = r.x+r.w/2, cy = r.y+r.h/2;
                 ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
-                ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5 / viewState.scale; ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
-                if (selectionState.shape === 'circle') {
-                    ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke();
-                } else { ctx.strokeRect(r.x, r.y, r.w, r.h); }
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5 / viewState.scale; ctx.setLineDash([5/viewState.scale, 5/viewState.scale]);
+                if (selectionState.shape === 'circle') { ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke(); }
+                else ctx.strokeRect(r.x, r.y, r.w, r.h);
                 ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineDashOffset = 5 / viewState.scale;
-                if (selectionState.shape === 'circle') {
-                    ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke();
-                } else { ctx.strokeRect(r.x, r.y, r.w, r.h); }
+                if (selectionState.shape === 'circle') { ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke(); }
+                else ctx.strokeRect(r.x, r.y, r.w, r.h);
                 drawHandles(ctx, r); ctx.restore();
             }
         }
 
         function drawHandles(ctx, rect) {
-            const hs = 8 / viewState.scale;
-            ctx.fillStyle = 'white'; ctx.strokeStyle = 'black'; ctx.lineWidth = 1 / viewState.scale;
-            const { x, y, w, h } = rect;
-            const handles = [{x, y}, {x:x+w, y}, {x:x+w, y:y+h}, {x, y:y+h}];
-            handles.forEach(h => {
-                ctx.fillRect(h.x - hs/2, h.y - hs/2, hs, hs);
-                ctx.strokeRect(h.x - hs/2, h.y - hs/2, hs, hs);
-            });
-            const cx = x + w / 2; const ry = y - 25 / viewState.scale;
+            const hs = 8 / viewState.scale; ctx.fillStyle = 'white'; ctx.strokeStyle = 'black'; ctx.lineWidth = 1 / viewState.scale;
+            const { x, y, w, h } = rect; const handles = [{x,y}, {x:x+w,y}, {x:x+w,y:y+h}, {x,y:y+h}];
+            handles.forEach(h => { ctx.fillRect(h.x-hs/2, h.y-hs/2, hs, hs); ctx.strokeRect(h.x-hs/2, h.y-hs/2, hs, hs); });
+            const cx = x + w / 2, ry = y - 25 / viewState.scale;
             ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, ry); ctx.stroke();
             ctx.beginPath(); ctx.arc(cx, ry, 5 / viewState.scale, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
         }
 
         function drawGrain(tCtx, w, h, s, ox = 0, oy = 0) {
-            const imageData = grainCtx.createImageData(256, 256); const d = imageData.data;
-            const a = (s / 100) * 100;
-            for (let i = 0; i < d.length; i += 4) {
-                const v = (Math.random() - 0.5) * a;
-                d[i] = 128+v; d[i+1] = 128+v; d[i+2] = 128+v; d[i+3] = 255;
-            }
-            grainCtx.putImageData(imageData, 0, 0);
-            tCtx.globalCompositeOperation = 'overlay';
-            tCtx.fillStyle = tCtx.createPattern(grainCanvas, 'repeat');
-            tCtx.fillRect(ox, oy, w, h); tCtx.globalCompositeOperation = 'source-over';
+            const imageData = grainCtx.createImageData(256, 256); const d = imageData.data, a = (s/100)*100;
+            for (let i = 0; i < d.length; i += 4) { const v = (Math.random()-0.5)*a; d[i]=128+v; d[i+1]=128+v; d[i+2]=128+v; d[i+3]=255; }
+            grainCtx.putImageData(imageData, 0, 0); tCtx.globalCompositeOperation = 'overlay';
+            tCtx.fillStyle = tCtx.createPattern(grainCanvas, 'repeat'); tCtx.fillRect(ox, oy, w, h); tCtx.globalCompositeOperation = 'source-over';
         }
         const grainCanvas = document.createElement('canvas'); grainCanvas.width = 256; grainCanvas.height = 256;
         const grainCtx = grainCanvas.getContext('2d');
 
-        // --- マウス操作 ---
-        dropZone.addEventListener('wheel', (e) => {
-            if (!isImageLoaded) return; e.preventDefault();
-            const ns = viewState.scale * (1 - e.deltaY * 0.001);
-            viewState.scale = Math.min(Math.max(ns, 0.05), 50); updateCanvasTransform();
-        }, { passive: false });
-
         function getHandleUnderMouse(mx, my) {
             if (!selectionState.active) return null;
-            const r = selectionState.rect; const cx = r.x+r.w/2; const cy = r.y+r.h/2;
+            const r = selectionState.rect; const cx = r.x+r.w/2, cy = r.y+r.h/2;
             const p = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
             const hs = 10 / viewState.scale;
             if (Math.abs(p.x-r.x)<hs && Math.abs(p.y-r.y)<hs) return 'tl';
@@ -886,122 +757,60 @@
 
         function isInsideRect(mx, my) {
             if (!selectionState.active) return false;
-            const r = selectionState.rect; const cx = r.x+r.w/2; const cy = r.y+r.h/2;
+            const r = selectionState.rect; const cx = r.x+r.w/2, cy = r.y+r.h/2;
             const p = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
             return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
         }
 
         canvas.addEventListener('mousedown', (e) => {
             if (!isImageLoaded) return;
-            if (currentMode === 'hand' || e.button === 1 || e.spaceKey) {
-                viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY;
-                canvas.style.cursor = 'grabbing'; return;
-            }
-            const r = canvas.getBoundingClientRect();
-            const mx = (e.clientX - r.left) / viewState.scale;
-            const my = (e.clientY - r.top) / viewState.scale;
+            if (currentMode === 'hand' || e.button === 1 || e.spaceKey) { viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY; canvas.style.cursor = 'grabbing'; return; }
+            const br = canvas.getBoundingClientRect(); const mx = (e.clientX - br.left) / viewState.scale, my = (e.clientY - br.top) / viewState.scale;
             const handle = getHandleUnderMouse(mx, my);
-            
             if (handle) {
-                selectionState.dragMode = (handle === 'rotate') ? 'rotate' : 'resize-' + handle;
-                selectionState.active = true;
-                
-                // リサイズ用：対角のアンカーポイントをグローバル座標で取得
-                const rect = selectionState.rect;
-                const cx = rect.x + rect.w/2; const cy = rect.y + rect.h/2;
-                let ax = rect.x, ay = rect.y; // デフォルトTL
-                if (handle === 'tl') { ax = rect.x + rect.w; ay = rect.y + rect.h; }
-                else if (handle === 'tr') { ax = rect.x; ay = rect.y + rect.h; }
-                else if (handle === 'bl') { ax = rect.x + rect.w; ay = rect.y; }
-                else if (handle === 'br') { ax = rect.x; ay = rect.y; }
+                selectionState.dragMode = handle === 'rotate' ? 'rotate' : 'resize-' + handle; selectionState.active = true;
+                const rect = selectionState.rect; const cx = rect.x+rect.w/2, cy = rect.y+rect.h/2;
+                let ax = rect.x, ay = rect.y;
+                if (handle === 'tl') { ax = rect.x + rect.w; ay = rect.y + rect.h; } else if (handle === 'tr') { ax = rect.x; ay = rect.y + rect.h; } else if (handle === 'bl') { ax = rect.x + rect.w; ay = rect.y; } else if (handle === 'br') { ax = rect.x; ay = rect.y; }
                 selectionState.anchorGlobal = rotatePoint(ax, ay, cx, cy, selectionState.rotation);
-
-            } else if (isInsideRect(mx, my)) {
-                selectionState.dragMode = 'move'; selectionState.active = true;
-            } else {
-                selectionState.dragMode = 'create'; selectionState.active = false; 
-                selectionState.shape = (currentMode === 'circle') ? 'circle' : 'rect';
-                selectionState.rotation = 0; actionBar.classList.add('hidden');
-            }
-            selectionState.startX = mx; selectionState.startY = my;
-            selectionState.initialRect = { ...selectionState.rect };
-            selectionState.initialRotation = selectionState.rotation;
+            } else if (isInsideRect(mx, my)) { selectionState.dragMode = 'move'; selectionState.active = true; } 
+            else { selectionState.dragMode = 'create'; selectionState.active = false; selectionState.shape = (currentMode === 'circle') ? 'circle' : 'rect'; selectionState.rotation = 0; actionBar.classList.add('hidden'); }
+            selectionState.startX = mx; selectionState.startY = my; selectionState.initialRect = { ...selectionState.rect }; selectionState.initialRotation = selectionState.rotation;
             if (selectionState.dragMode === 'create') selectionState.rect = { x: mx, y: my, w: 0, h: 0 };
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!isImageLoaded) return;
-            if (viewState.isDragging) {
-                const dx = e.clientX - viewState.lastX; const dy = e.clientY - viewState.lastY;
-                viewState.x += dx; viewState.y += dy; viewState.lastX = e.clientX; viewState.lastY = e.clientY;
-                updateCanvasTransform(); return;
-            }
-            const br = canvas.getBoundingClientRect();
-            const mx = (e.clientX - br.left) / viewState.scale;
-            const my = (e.clientY - br.top) / viewState.scale;
+            if (viewState.isDragging) { const dx = e.clientX - viewState.lastX, dy = e.clientY - viewState.lastY; viewState.x += dx; viewState.y += dy; viewState.lastX = e.clientX; viewState.lastY = e.clientY; updateCanvasTransform(); return; }
+            const br = canvas.getBoundingClientRect(); const mx = (e.clientX - br.left) / viewState.scale, my = (e.clientY - br.top) / viewState.scale;
             const handle = getHandleUnderMouse(mx, my);
-            if (handle) canvas.style.cursor = (handle === 'rotate') ? 'alias' : (handle === 'tl' || handle === 'br') ? 'nwse-resize' : 'nesw-resize';
+            if (handle) canvas.style.cursor = handle === 'rotate' ? 'alias' : (handle === 'tl' || handle === 'br' ? 'nwse-resize' : 'nesw-resize');
             else if (isInsideRect(mx, my)) canvas.style.cursor = 'move';
             else canvas.style.cursor = 'crosshair';
-
             if (!selectionState.dragMode) return;
-            if (selectionState.dragMode === 'rotate') {
-                const r = selectionState.rect; const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
-                selectionState.rotation = Math.atan2(my - cy, mx - cx) + Math.PI / 2;
-                render(); return;
-            }
-
-            if (selectionState.dragMode === 'move') {
-                const dx = mx - selectionState.startX;
-                const dy = my - selectionState.startY;
-                selectionState.rect.x = selectionState.initialRect.x + dx;
-                selectionState.rect.y = selectionState.initialRect.y + dy;
-            } else if (selectionState.dragMode === 'create') {
-                let w = mx - selectionState.startX; let h = my - selectionState.startY;
+            if (selectionState.dragMode === 'rotate') { const r = selectionState.rect, cx = r.x+r.w/2, cy = r.y+r.h/2; selectionState.rotation = Math.atan2(my - cy, mx - cx) + Math.PI / 2; render(); return; }
+            if (selectionState.dragMode === 'move') { selectionState.rect.x = selectionState.initialRect.x + (mx - selectionState.startX); selectionState.rect.y = selectionState.initialRect.y + (my - selectionState.startY); } 
+            else if (selectionState.dragMode === 'create') {
+                let w = mx - selectionState.startX, h = my - selectionState.startY;
                 const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? baseImage.width / baseImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
-                if (ratio) { if (Math.abs(w/ratio) < Math.abs(h)) h = w/ratio; else w = h*ratio; }
-                else if (e.shiftKey) { const size = Math.max(Math.abs(w), Math.abs(h)); w = w >= 0 ? size : -size; h = h >= 0 ? size : -size; }
+                if (ratio) { if (Math.abs(w/ratio) < Math.abs(h)) h = w/ratio; else w = h*ratio; } else if (e.shiftKey) { const size = Math.max(Math.abs(w), Math.abs(h)); w = w >= 0 ? size : -size; h = h >= 0 ? size : -size; }
                 selectionState.rect = { x: w > 0 ? selectionState.startX : selectionState.startX + w, y: h > 0 ? selectionState.startY : selectionState.startY + h, w: Math.abs(w), h: Math.abs(h) };
                 selectionState.active = true;
             } else if (selectionState.dragMode.startsWith('resize')) {
-                const type = selectionState.dragMode.split('-')[1];
-                const anchor = selectionState.anchorGlobal;
-                const rotation = selectionState.rotation;
-                
-                // マウス位置をアンカーを起点としたローカル座標に変換
-                const lp = rotatePoint(mx, my, anchor.x, anchor.y, -rotation);
-                let nw = lp.x, nh = lp.y;
-                
-                // ハンドル位置による方向修正
-                if (type === 'tl' || type === 'bl') nw = -lp.x;
-                if (type === 'tl' || type === 'tr') nh = -lp.y;
-
+                const type = selectionState.dragMode.split('-')[1], anchor = selectionState.anchorGlobal, rot = selectionState.rotation;
+                const lp = rotatePoint(mx, my, anchor.x, anchor.y, -rot);
+                let nw = lp.x, nh = lp.y; if (type === 'tl' || type === 'bl') nw = -lp.x; if (type === 'tl' || type === 'tr') nh = -lp.y;
                 const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? baseImage.width / baseImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
-                if (ratio) { nh = nw / ratio; }
-                else if (e.shiftKey) { const size = Math.max(Math.abs(nw), Math.abs(nh)); nw = size; nh = size; }
-
-                // 新しい中心座標の計算（アンカーから新しい中心点へ）
-                // アンカーに対する新しいローカル中心
-                let lcx = nw / 2, lcy = nh / 2;
-                if (type === 'tl' || type === 'bl') lcx = -nw / 2;
-                if (type === 'tl' || type === 'tr') lcy = -nh / 2;
-                
-                const newCenter = rotatePoint(anchor.x + lcx, anchor.y + lcy, anchor.x, anchor.y, rotation);
-                
-                selectionState.rect = { 
-                    x: newCenter.x - Math.abs(nw)/2, 
-                    y: newCenter.y - Math.abs(nh)/2, 
-                    w: Math.abs(nw), 
-                    h: Math.abs(nh) 
-                };
+                if (ratio) nh = nw / ratio; else if (e.shiftKey) { const s = Math.max(Math.abs(nw), Math.abs(nh)); nw = s; nh = s; }
+                let lcx = nw / 2, lcy = nh / 2; if (type === 'tl' || type === 'bl') lcx = -nw / 2; if (type === 'tl' || type === 'tr') lcy = -nh / 2;
+                const newCenter = rotatePoint(anchor.x + lcx, anchor.y + lcy, anchor.x, anchor.y, rot);
+                selectionState.rect = { x: newCenter.x - Math.abs(nw)/2, y: newCenter.y - Math.abs(nh)/2, w: Math.abs(nw), h: Math.abs(nh) };
             }
             render();
         });
 
         window.addEventListener('mouseup', () => {
-            if (viewState.isDragging) {
-                viewState.isDragging = false; canvas.style.cursor = currentMode === 'hand' ? 'grab' : 'crosshair';
-            }
+            if (viewState.isDragging) { viewState.isDragging = false; canvas.style.cursor = currentMode === 'hand' ? 'grab' : 'crosshair'; }
             if (selectionState.dragMode) {
                 selectionState.dragMode = null;
                 if (selectionState.rect.w > 5 && selectionState.rect.h > 5) {
@@ -1018,8 +827,7 @@
         
         downloadBtn.addEventListener('click', () => {
             if (!isImageLoaded) return; render(true);
-            const now = new Date();
-            const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+            const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
             const link = document.createElement('a'); link.download = `${currentFileName}-${ts}.png`;
             link.href = canvas.toDataURL('image/png', 0.9); link.click(); render();
         });
@@ -1038,6 +846,7 @@
                 case 'matte': globalParams.saturation = -25; globalParams.contrast = -20; globalParams.highlights = -20; globalParams.shadows = 30; break;
                 case 'dramatic': globalParams.contrast = 45; globalParams.vignette = 60; globalParams.highlights = 20; globalParams.shadows = -20; break;
             }
+            saveHistoryState(); 
             updateInputDisplays(globalParams, ''); render();
         };
 
