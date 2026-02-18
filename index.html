@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3-PhotoEditor Pro</title>
+    <title>M3-PhotoEditor Ver.01</title>
     <!-- M3を活かしたシンプルでカッコイイWebアイコンの設定 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='black'/><rect x='12' y='12' width='76' height='76' rx='10' fill='none' stroke='white' stroke-width='1.5' opacity='0.4'/><text x='50%' y='52%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui, sans-serif' font-weight='900' font-size='48' letter-spacing='-2'>M3</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -86,12 +86,12 @@
     <header class="h-14 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-4 sm:px-6 shrink-0 z-20">
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
-                <!-- ロゴ部分も新しいデザインに合わせる -->
+                <!-- ロゴ -->
                 <svg width="24" height="24" viewBox="0 0 100 100" class="shrink-0">
                     <rect width="100" height="100" rx="22" fill="white"/>
                     <text x="50%" y="52%" dominant-baseline="central" text-anchor="middle" fill="black" font-family="sans-serif" font-weight="900" font-size="50" letter-spacing="-2">M3</text>
                 </svg>
-                <span class="font-medium tracking-widest text-neutral-100 text-sm hidden sm:block uppercase">M3-PhotoEditor</span>
+                <span class="font-medium tracking-widest text-neutral-100 text-sm hidden sm:block uppercase">PhotoEditor</span>
             </div>
             
             <!-- 履歴操作 -->
@@ -169,7 +169,6 @@
             
             <div class="w-8 h-px bg-neutral-800 shrink-0"></div>
 
-            <!-- プリセットボタン群 -->
             <div class="flex flex-col gap-3 pb-4">
                 <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
                     <span class="font-serif font-bold text-xs">BW</span>
@@ -186,7 +185,6 @@
                 
                 <div class="w-8 h-px bg-neutral-800 shrink-0 mx-auto"></div>
 
-                <!-- 新規追加プリセット -->
                 <button onclick="applyPreset('vivid')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ビビッド">
                     <i class="ph ph-sparkle text-yellow-400"></i>
                 </button>
@@ -204,7 +202,7 @@
 
         <!-- キャンバスエリア -->
         <main class="flex-1 bg-neutral-950 relative overflow-hidden canvas-container flex items-center justify-center" id="drop-zone">
-            <!-- 初期表示メッセージ -->
+            <!-- 初期メッセージ -->
             <div id="placeholder-msg" class="text-center pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-10">
                 <i class="ph ph-image text-6xl text-neutral-700 mb-4"></i>
                 <p class="text-neutral-500 font-light">ここに画像をドロップ<br>または「開く」を選択</p>
@@ -356,9 +354,10 @@
                 </div>
             </div>
 
+            <!-- フッター情報 -->
             <div class="mt-auto p-6 text-center shrink-0">
-                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor v2.7</p>
-                <p class="text-[10px] text-neutral-600 mt-1">Created by Hayao</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.01</p>
+                <p class="text-[10px] text-neutral-600 mt-1 tracking-wider">created by Hayao</p>
             </div>
         </aside>
     </div>
@@ -393,7 +392,7 @@
 
         // --- メインロジック ---
         
-        const CANVAS_PAD = 60; // 余白サイズ
+        const CANVAS_PAD = 80; // 余白サイズ (回転ハンドル等の表示領域確保)
 
         // DOM要素
         const canvas = document.getElementById('editor-canvas');
@@ -423,7 +422,7 @@
         const history = new HistoryManager();
         let isImageLoaded = false;
         let currentMode = 'hand'; 
-        let currentFileName = 'm3_photo_edited';
+        let currentFileName = 'photo_edited';
         
         let baseImage = null; 
         
@@ -434,12 +433,12 @@
 
         let selectionState = {
             active: false,
-            dragMode: null, 
+            dragMode: null, // 'create', 'move', 'resize-tl'..., 'rotate'
             startX: 0, startY: 0, 
             initialRect: null, 
             initialRotation: 0,
             shape: 'rect',
-            rotation: 0,
+            rotation: 0, // ラジアン
             rect: { x: 0, y: 0, w: 0, h: 0 }
         };
 
@@ -463,7 +462,7 @@
         window.resetView = () => {
             if(!isImageLoaded || !baseImage) return;
             const containerW = dropZone.clientWidth; const containerH = dropZone.clientHeight;
-            const scaleW = (containerW - 64) / canvas.width; const scaleH = (containerH - 64) / canvas.height;
+            const scaleW = (containerW - 40) / canvas.width; const scaleH = (containerH - 40) / canvas.height;
             viewState.scale = Math.min(scaleW, scaleH, 1); viewState.x = 0; viewState.y = 0;
             updateCanvasTransform();
         };
@@ -660,9 +659,7 @@
                 tmpCtx.beginPath();
                 if (selectionState.shape === 'circle') {
                     tmpCtx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
-                } else {
-                    tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); 
-                }
+                } else { tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); }
 
                 if (isInvert) {
                     tmpCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -671,7 +668,7 @@
                     tmpCtx.translate(cx, cy); tmpCtx.rotate(rotation); tmpCtx.translate(-cx, -cy);
                     tmpCtx.beginPath();
                     if (selectionState.shape === 'circle') {
-                        tmpCtx.ellipse(cx, cy, Math.abs(rect.w / 2), Math.abs(rect.h / 2), 0, 0, 2 * Math.PI);
+                        tmpCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
                     } else { tmpCtx.rect(adjRectX, adjRectY, rect.w, rect.h); }
                     tmpCtx.clip();
                     tmpCtx.translate(cx, cy); tmpCtx.rotate(-rotation); tmpCtx.translate(-cx, -cy);
@@ -700,7 +697,6 @@
             const cropCanvas = document.createElement('canvas');
             cropCanvas.width = w; cropCanvas.height = h;
             const cCtx = cropCanvas.getContext('2d');
-
             cCtx.translate(w / 2, h / 2);
             cCtx.rotate(-rotation);
             cCtx.drawImage(baseImage, -cx, -cy);
@@ -736,7 +732,9 @@
             const w = canvas.width; const h = canvas.height; const gp = globalParams;
             ctx.clearRect(0, 0, w, h);
             
-            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20; 
+            if (!isExport) {
+                ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 20; 
+            }
             
             let filterStr = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
             ctx.filter = filterStr; 
@@ -754,8 +752,7 @@
                 if (lp.mosaic > 0 || lp.blur > 0) {
                     const imgW = baseImage.width; const imgH = baseImage.height;
                     const eC = document.createElement('canvas'); eC.width = imgW; eC.height = imgH;
-                    const eCtx = eC.getContext('2d'); 
-                    eCtx.drawImage(canvas, CANVAS_PAD, CANVAS_PAD, imgW, imgH, 0, 0, imgW, imgH);
+                    const eCtx = eC.getContext('2d'); eCtx.drawImage(canvas, CANVAS_PAD, CANVAS_PAD, imgW, imgH, 0, 0, imgW, imgH);
 
                     if (lp.blur > 0) {
                         const bC = document.createElement('canvas'); bC.width = imgW; bC.height = imgH;
@@ -778,13 +775,8 @@
                     } else { ctx.rect(rect.x, rect.y, rect.w, rect.h); }
                     
                     if (isInvert) {
-                        ctx.restore(); 
-                        ctx.save();
-                        ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD); 
-                        ctx.restore();
-
-                        ctx.save();
-                        ctx.translate(cx, cy); ctx.rotate(rotation); ctx.translate(-cx, -cy);
+                        ctx.restore(); ctx.save(); ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD); ctx.restore();
+                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rotation); ctx.translate(-cx, -cy);
                         ctx.beginPath();
                         if (selectionState.shape === 'circle') { ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI); }
                         else { ctx.rect(rect.x, rect.y, rect.w, rect.h); }
@@ -793,8 +785,7 @@
                         ctx.filter = filterStr; ctx.drawImage(baseImage, CANVAS_PAD, CANVAS_PAD); ctx.filter = 'none';
                         if (gp.highlights !== 0 || gp.shadows !== 0) applyHighlightsShadows(ctx, w, h, gp.highlights, gp.shadows);
                     } else {
-                        ctx.clip();
-                        ctx.translate(cx, cy); ctx.rotate(-rotation); ctx.translate(-cx, -cy);
+                        ctx.clip(); ctx.translate(cx, cy); ctx.rotate(-rotation); ctx.translate(-cx, -cy);
                         ctx.drawImage(eC, CANVAS_PAD, CANVAS_PAD);
                     }
                     ctx.restore();
@@ -802,16 +793,12 @@
             }
 
             if (selectionState.active && currentMode === 'crop' && !isExport) {
-                const r = selectionState.rect;
-                const rot = selectionState.rotation;
+                const r = selectionState.rect; const rot = selectionState.rotation;
                 const cx = r.x + r.w/2; const cy = r.y + r.h/2;
-                ctx.save();
-                ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
-                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 / viewState.scale;
-                ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]);
+                ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 / viewState.scale; ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]);
                 ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.setLineDash([]);
-                drawHandles(ctx, r);
-                ctx.restore();
+                drawHandles(ctx, r); ctx.restore();
             }
 
             ctx.save();
@@ -832,11 +819,9 @@
             ctx.restore();
 
             if (!isExport && selectionState.active && currentMode !== 'crop') {
-                const r = selectionState.rect;
-                const rot = selectionState.rotation;
+                const r = selectionState.rect; const rot = selectionState.rotation;
                 const cx = r.x + r.w/2; const cy = r.y + r.h/2;
-                ctx.save();
-                ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
+                ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
                 ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5 / viewState.scale; ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
                 if (selectionState.shape === 'circle') {
                     ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke();
@@ -845,40 +830,35 @@
                 if (selectionState.shape === 'circle') {
                     ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, 2*Math.PI); ctx.stroke();
                 } else { ctx.strokeRect(r.x, r.y, r.w, r.h); }
-                drawHandles(ctx, r);
-                ctx.restore();
+                drawHandles(ctx, r); ctx.restore();
             }
         }
 
         function drawHandles(ctx, rect) {
-            const handleSize = 8 / viewState.scale;
+            const hs = 8 / viewState.scale;
             ctx.fillStyle = 'white'; ctx.strokeStyle = 'black'; ctx.lineWidth = 1 / viewState.scale;
-            const x = rect.x, y = rect.y, w = rect.w, h = rect.h;
-            const handles = [
-                {x: x, y: y}, {x: x + w, y: y}, {x: x + w, y: y + h}, {x: x, y: y + h}
-            ];
+            const { x, y, w, h } = rect;
+            const handles = [{x, y}, {x:x+w, y}, {x:x+w, y:y+h}, {x, y:y+h}];
             handles.forEach(h => {
-                ctx.fillRect(h.x - handleSize/2, h.y - handleSize/2, handleSize, handleSize);
-                ctx.strokeRect(h.x - handleSize/2, h.y - handleSize/2, handleSize, handleSize);
+                ctx.fillRect(h.x - hs/2, h.y - hs/2, hs, hs);
+                ctx.strokeRect(h.x - hs/2, h.y - hs/2, hs, hs);
             });
-
-            const cx = x + w / 2;
-            const rotHandleY = y - 25 / viewState.scale;
-            ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, rotHandleY); ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx, rotHandleY, 5 / viewState.scale, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+            const cx = x + w / 2; const ry = y - 25 / viewState.scale;
+            ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, ry); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, ry, 5 / viewState.scale, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
         }
 
-        function drawGrain(targetCtx, w, h, strength, offsetX = 0, offsetY = 0) {
-            const imageData = grainCtx.createImageData(256, 256); const data = imageData.data;
-            const alpha = (strength / 100) * 100;
-            for (let i = 0; i < data.length; i += 4) {
-                const val = (Math.random() - 0.5) * alpha;
-                data[i] = 128 + val; data[i+1] = 128 + val; data[i+2] = 128 + val; data[i+3] = 255;
+        function drawGrain(tCtx, w, h, s, ox = 0, oy = 0) {
+            const imageData = grainCtx.createImageData(256, 256); const d = imageData.data;
+            const a = (s / 100) * 100;
+            for (let i = 0; i < d.length; i += 4) {
+                const v = (Math.random() - 0.5) * a;
+                d[i] = 128+v; d[i+1] = 128+v; d[i+2] = 128+v; d[i+3] = 255;
             }
             grainCtx.putImageData(imageData, 0, 0);
-            targetCtx.globalCompositeOperation = 'overlay';
-            targetCtx.fillStyle = targetCtx.createPattern(grainCanvas, 'repeat');
-            targetCtx.fillRect(offsetX, offsetY, w, h); targetCtx.globalCompositeOperation = 'source-over';
+            tCtx.globalCompositeOperation = 'overlay';
+            tCtx.fillStyle = tCtx.createPattern(grainCanvas, 'repeat');
+            tCtx.fillRect(ox, oy, w, h); tCtx.globalCompositeOperation = 'source-over';
         }
         const grainCanvas = document.createElement('canvas'); grainCanvas.width = 256; grainCanvas.height = 256;
         const grainCtx = grainCanvas.getContext('2d');
@@ -886,40 +866,28 @@
         // --- マウス操作 ---
         dropZone.addEventListener('wheel', (e) => {
             if (!isImageLoaded) return; e.preventDefault();
-            const newScale = viewState.scale * (1 - e.deltaY * 0.001);
-            viewState.scale = Math.min(Math.max(newScale, 0.05), 50); updateCanvasTransform();
+            const ns = viewState.scale * (1 - e.deltaY * 0.001);
+            viewState.scale = Math.min(Math.max(ns, 0.05), 50); updateCanvasTransform();
         }, { passive: false });
 
         function getHandleUnderMouse(mx, my) {
             if (!selectionState.active) return null;
-            const r = selectionState.rect;
-            const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
-            const angle = -selectionState.rotation;
-            const p = rotatePoint(mx, my, cx, cy, angle);
-            const handleSize = 10 / viewState.scale; 
-            if (Math.abs(p.x - r.x) < handleSize && Math.abs(p.y - r.y) < handleSize) return 'tl';
-            if (Math.abs(p.x - (r.x + r.w)) < handleSize && Math.abs(p.y - r.y) < handleSize) return 'tr';
-            if (Math.abs(p.x - (r.x + r.w)) < handleSize && Math.abs(p.y - (r.y + r.h)) < handleSize) return 'br';
-            if (Math.abs(p.x - r.x) < handleSize && Math.abs(p.y - (r.y + r.h)) < handleSize) return 'bl';
-            const rotHandleY = r.y - 25 / viewState.scale;
-            if (Math.abs(p.x - cx) < handleSize && Math.abs(p.y - rotHandleY) < handleSize) return 'rotate';
+            const r = selectionState.rect; const cx = r.x+r.w/2; const cy = r.y+r.h/2;
+            const p = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
+            const hs = 10 / viewState.scale;
+            if (Math.abs(p.x-r.x)<hs && Math.abs(p.y-r.y)<hs) return 'tl';
+            if (Math.abs(p.x-(r.x+r.w))<hs && Math.abs(p.y-r.y)<hs) return 'tr';
+            if (Math.abs(p.x-(r.x+r.w))<hs && Math.abs(p.y-(r.y+r.h))<hs) return 'br';
+            if (Math.abs(p.x-r.x)<hs && Math.abs(p.y-(r.y+r.h))<hs) return 'bl';
+            if (Math.abs(p.x-cx)<hs && Math.abs(p.y-(r.y-25/viewState.scale))<hs) return 'rotate';
             return null;
         }
 
         function isInsideRect(mx, my) {
             if (!selectionState.active) return false;
-            const r = selectionState.rect;
-            const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
-            const angle = -selectionState.rotation;
-            const p = rotatePoint(mx, my, cx, cy, angle);
+            const r = selectionState.rect; const cx = r.x+r.w/2; const cy = r.y+r.h/2;
+            const p = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
             return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
-        }
-
-        function getAspectRatio() {
-            const val = aspectRatioSelect.value;
-            if (val === 'free') return null;
-            if (val === 'original') return baseImage.width / baseImage.height;
-            const parts = val.split(':'); return parseFloat(parts[0]) / parseFloat(parts[1]);
         }
 
         canvas.addEventListener('mousedown', (e) => {
@@ -928,9 +896,9 @@
                 viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY;
                 canvas.style.cursor = 'grabbing'; return;
             }
-            const rect = canvas.getBoundingClientRect();
-            const mx = (e.clientX - rect.left) / viewState.scale;
-            const my = (e.clientY - rect.top) / viewState.scale;
+            const r = canvas.getBoundingClientRect();
+            const mx = (e.clientX - r.left) / viewState.scale;
+            const my = (e.clientY - r.top) / viewState.scale;
             const handle = getHandleUnderMouse(mx, my);
             if (handle) {
                 selectionState.dragMode = (handle === 'rotate') ? 'rotate' : 'resize-' + handle;
@@ -945,7 +913,7 @@
             selectionState.startX = mx; selectionState.startY = my;
             selectionState.initialRect = { ...selectionState.rect };
             selectionState.initialRotation = selectionState.rotation;
-            if (selectionState.dragMode === 'create') { selectionState.rect = { x: mx, y: my, w: 0, h: 0 }; }
+            if (selectionState.dragMode === 'create') selectionState.rect = { x: mx, y: my, w: 0, h: 0 };
         });
 
         window.addEventListener('mousemove', (e) => {
@@ -955,9 +923,9 @@
                 viewState.x += dx; viewState.y += dy; viewState.lastX = e.clientX; viewState.lastY = e.clientY;
                 updateCanvasTransform(); return;
             }
-            const rect = canvas.getBoundingClientRect();
-            const mx = (e.clientX - rect.left) / viewState.scale;
-            const my = (e.clientY - rect.top) / viewState.scale;
+            const br = canvas.getBoundingClientRect();
+            const mx = (e.clientX - br.left) / viewState.scale;
+            const my = (e.clientY - br.top) / viewState.scale;
             const handle = getHandleUnderMouse(mx, my);
             if (handle) canvas.style.cursor = (handle === 'rotate') ? 'alias' : (handle === 'tl' || handle === 'br') ? 'nwse-resize' : 'nesw-resize';
             else if (isInsideRect(mx, my)) canvas.style.cursor = 'move';
@@ -965,41 +933,34 @@
 
             if (!selectionState.dragMode) return;
             if (selectionState.dragMode === 'rotate') {
-                const r = selectionState.rect;
-                const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
-                const angle = Math.atan2(my - cy, mx - cx);
-                selectionState.rotation = angle + Math.PI / 2;
+                const r = selectionState.rect; const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
+                selectionState.rotation = Math.atan2(my - cy, mx - cx) + Math.PI / 2;
                 render(); return;
             }
-            const r = selectionState.initialRect;
-            const cx = r.x + r.w / 2; const cy = r.y + r.h / 2;
-            const angle = -selectionState.rotation;
-            const p = rotatePoint(mx, my, cx, cy, angle);
-            const startP = rotatePoint(selectionState.startX, selectionState.startY, cx, cy, angle);
+            const ir = selectionState.initialRect; const cx = ir.x + ir.w / 2; const cy = ir.y + ir.h / 2;
+            const p = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
+            const sp = rotatePoint(selectionState.startX, selectionState.startY, cx, cy, -selectionState.rotation);
 
             if (selectionState.dragMode === 'move') {
-                const dx = p.x - startP.x; const dy = p.y - startP.y;
-                selectionState.rect.x = selectionState.initialRect.x + dx;
-                selectionState.rect.y = selectionState.initialRect.y + dy;
+                selectionState.rect.x = ir.x + (p.x - sp.x); selectionState.rect.y = ir.y + (p.y - sp.y);
             } else if (selectionState.dragMode === 'create') {
                 let w = mx - selectionState.startX; let h = my - selectionState.startY;
-                const ratio = (currentMode === 'crop') ? getAspectRatio() : null;
-                if (ratio) { if (Math.abs(w / ratio) < Math.abs(h)) h = w / ratio; else w = h * ratio; }
+                const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? baseImage.width / baseImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
+                if (ratio) { if (Math.abs(w/ratio) < Math.abs(h)) h = w/ratio; else w = h*ratio; }
                 else if (e.shiftKey) { const size = Math.max(Math.abs(w), Math.abs(h)); w = w >= 0 ? size : -size; h = h >= 0 ? size : -size; }
                 selectionState.rect = { x: w > 0 ? selectionState.startX : selectionState.startX + w, y: h > 0 ? selectionState.startY : selectionState.startY + h, w: Math.abs(w), h: Math.abs(h) };
                 selectionState.active = true;
             } else if (selectionState.dragMode.startsWith('resize')) {
                 const type = selectionState.dragMode.split('-')[1];
-                const initR = selectionState.initialRect;
-                let newX = initR.x, newY = initR.y, newW = initR.w, newH = initR.h;
-                if (type === 'br') { newW = p.x - newX; newH = p.y - newY; }
-                else if (type === 'bl') { newW = (initR.x + initR.w) - p.x; newX = p.x; newH = p.y - newY; }
-                else if (type === 'tr') { newW = p.x - newX; newH = (initR.y + initR.h) - p.y; newY = p.y; }
-                else if (type === 'tl') { newW = (initR.x + initR.w) - p.x; newX = p.x; newH = (initR.y + initR.h) - p.y; newY = p.y; }
-                const ratio = (currentMode === 'crop') ? getAspectRatio() : null;
-                if (ratio) { newH = newW / ratio; if (type.includes('t')) newY = (initR.y + initR.h) - newH; }
-                else if (e.shiftKey) { const size = Math.max(Math.abs(newW), Math.abs(newH)); newW = size; newH = size; }
-                selectionState.rect = { x: newX, y: newY, w: Math.abs(newW), h: Math.abs(newH) };
+                let { x: nx, y: ny, w: nw, h: nh } = ir;
+                if (type === 'br') { nw = p.x - nx; nh = p.y - ny; }
+                else if (type === 'bl') { nw = (ir.x+ir.w) - p.x; nx = p.x; nh = p.y - ny; }
+                else if (type === 'tr') { nw = p.x - nx; nh = (ir.y+ir.h) - p.y; ny = p.y; }
+                else if (type === 'tl') { nw = (ir.x+ir.w) - p.x; nx = p.x; nh = (ir.y+ir.h) - p.y; ny = p.y; }
+                const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? baseImage.width / baseImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
+                if (ratio) { nh = nw / ratio; if (type.includes('t')) ny = (ir.y + ir.h) - nh; }
+                else if (e.shiftKey) { const size = Math.max(Math.abs(nw), Math.abs(nh)); nw = size; nh = size; }
+                selectionState.rect = { x: nx, y: ny, w: Math.abs(nw), h: Math.abs(nh) };
             }
             render();
         });
@@ -1014,22 +975,14 @@
                     selectionState.active = true; actionBar.classList.remove('hidden');
                     if (currentMode === 'crop') { actionLabel.textContent = 'トリミング範囲'; localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); }
                     else { actionLabel.textContent = '選択範囲'; localPanelOverlay.classList.add('opacity-0', 'pointer-events-none'); resetParams(localParams); }
-                } else { selectionState.active = false; }
+                } else selectionState.active = false;
                 render();
             }
         });
 
-        function resetParams(paramsObj) {
-            Object.keys(paramsObj).forEach(k => paramsObj[k] = 0);
-            updateInputDisplays(paramsObj, paramsObj === localParams ? 'local' : '');
-        }
-        function updateInputDisplays(paramsObj, prefix) {
-            Object.keys(paramsObj).forEach(key => {
-                const id = getElementId(prefix, key);
-                const slider = document.getElementById(id); const num = document.getElementById('num-' + id);
-                if (slider) slider.value = paramsObj[key]; if (num) num.value = paramsObj[key];
-            });
-        }
+        function resetParams(p) { Object.keys(p).forEach(k => p[k] = 0); updateInputDisplays(p, p === localParams ? 'local' : ''); }
+        function updateInputDisplays(p, pre) { Object.keys(p).forEach(k => { const id = getElementId(pre, k); const s = document.getElementById(id); const n = document.getElementById('num-'+id); if (s) s.value = p[k]; if (n) n.value = p[k]; }); }
+        
         downloadBtn.addEventListener('click', () => {
             if (!isImageLoaded) return; render(true);
             const now = new Date();
@@ -1037,6 +990,7 @@
             const link = document.createElement('a'); link.download = `${currentFileName}-${ts}.png`;
             link.href = canvas.toDataURL('image/png', 0.9); link.click(); render();
         });
+
         window.applyPreset = (type) => {
             if (!isImageLoaded) return;
             if (type === 'default' && !confirm('リセットしますか？')) return;
@@ -1053,6 +1007,7 @@
             }
             updateInputDisplays(globalParams, ''); render();
         };
+
         updateInputDisplays(globalParams, ''); updateInputDisplays(localParams, 'local');
     </script>
 </body>
