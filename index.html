@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3-PhotoEditor Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* カスタムスクロールバー */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #171717; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #404040; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #525252; 
+        }
+
+        /* スライダー */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #d4d4d4;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #fff;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #404040;
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* 数値入力 */
+        input[type=number] {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #737373;
+            font-family: monospace;
+            width: 3.5rem;
+            text-align: right;
+            border-radius: 4px;
+            padding: 0 4px;
+            -moz-appearance: textfield;
+        }
+        input[type=number]:hover {
+            border-color: #404040;
+            color: #d4d4d4;
+        }
+        input[type=number]:focus {
+            outline: none;
+            border-color: #d4d4d4;
+            color: #fff;
+            background: #262626;
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        /* キャンバス背景 */
+        .canvas-container {
+            background-image: 
+                linear-gradient(45deg, #262626 25%, transparent 25%), 
+                linear-gradient(-45deg, #262626 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #262626 75%), 
+                linear-gradient(-45deg, transparent 75%, #262626 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            background-color: #171717;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #editor-canvas {
+            transform-origin: center center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .tool-btn.active {
+            background-color: #e5e5e5;
+            color: #171717;
+        }
+
+        /* アニメーション */
+        @keyframes flash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .flash-overlay {
+            animation: flash 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-neutral-950 text-neutral-300 font-sans h-screen flex flex-col overflow-hidden selection:bg-neutral-600 selection:text-white">
+
+    <!-- ヘッダー -->
+    <header class="h-14 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-4 sm:px-6 shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="ph ph-aperture text-2xl text-neutral-100"></i>
+                <span class="font-medium tracking-widest text-neutral-100 text-sm hidden sm:block">M3-PhotoEditor</span>
+            </div>
+            
+            <!-- 履歴操作 (Undo/Redo) -->
+            <div class="flex items-center gap-1 ml-4 border-l border-neutral-700 pl-4">
+                <button onclick="undo()" id="btn-undo" class="w-8 h-8 rounded flex items-center justify-center transition hover:bg-neutral-800 text-neutral-400 disabled:opacity-30 disabled:cursor-not-allowed" title="元に戻す (Ctrl+Z)" disabled>
+                    <i class="ph ph-arrow-u-up-left text-lg"></i>
+                </button>
+                <button onclick="redo()" id="btn-redo" class="w-8 h-8 rounded flex items-center justify-center transition hover:bg-neutral-800 text-neutral-400 disabled:opacity-30 disabled:cursor-not-allowed" title="やり直す (Ctrl+Y)" disabled>
+                    <i class="ph ph-arrow-u-up-right text-lg"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- ツールバー（中央） -->
+        <div class="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg border border-neutral-700 absolute left-1/2 transform -translate-x-1/2 shadow-lg z-30">
+            <button id="tool-hand" class="tool-btn active w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="移動・ズーム (Space)">
+                <i class="ph ph-hand-grabbing text-lg"></i>
+            </button>
+            <div class="w-px h-5 bg-neutral-600 mx-1"></div>
+            <button id="tool-select" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="範囲選択・部分補正 (M)">
+                <i class="ph ph-selection-plus text-lg"></i>
+            </button>
+            <button id="tool-crop" class="tool-btn w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="トリミング (C)">
+                <i class="ph ph-crop text-lg"></i>
+            </button>
+            <div class="w-px h-5 bg-neutral-600 mx-1"></div>
+            <button onclick="resetView()" class="w-9 h-9 rounded flex items-center justify-center transition hover:bg-neutral-700 hover:text-white text-neutral-400" title="表示リセット (Fit)">
+                <i class="ph ph-corners-out text-lg"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <label for="upload-input" class="cursor-pointer flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 transition text-xs font-medium text-neutral-200 border border-neutral-700 whitespace-nowrap">
+                <i class="ph ph-upload-simple"></i>
+                <span class="hidden sm:inline">開く</span>
+            </label>
+            <input type="file" id="upload-input" class="hidden" accept="image/*">
+            
+            <button id="download-btn" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-white text-neutral-900 transition text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap" disabled>
+                <i class="ph ph-download-simple"></i>
+                <span class="hidden sm:inline">保存</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- メインエリア -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- 左サイドバー（プリセット） -->
+        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-6 shrink-0 z-10 hidden sm:flex">
+            <div class="group relative">
+                <button onclick="applyPreset('default')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition" title="パラメータリセット">
+                    <i class="ph ph-sliders"></i>
+                </button>
+                <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">パラメータリセット</span>
+            </div>
+            
+            <div class="w-8 h-px bg-neutral-800"></div>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                    <span class="font-serif font-bold text-sm">BW</span>
+                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">モノクロ</span>
+                </button>
+                <button onclick="applyPreset('warm')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                    <span class="text-orange-300 text-lg">●</span>
+                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">ウォーム</span>
+                </button>
+                <button onclick="applyPreset('cool')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                    <span class="text-blue-300 text-lg">●</span>
+                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">クール</span>
+                </button>
+                <button onclick="applyPreset('film')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative">
+                    <i class="ph ph-film-strip"></i>
+                    <span class="absolute left-14 top-2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap border border-neutral-800 z-50">フィルム調</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- キャンバスエリア -->
+        <main class="flex-1 bg-neutral-950 relative overflow-hidden canvas-container flex items-center justify-center" id="drop-zone">
+            <!-- 初期表示メッセージ -->
+            <div id="placeholder-msg" class="text-center pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-10">
+                <i class="ph ph-image text-6xl text-neutral-700 mb-4"></i>
+                <p class="text-neutral-500 font-light">ここに画像をドロップ<br>または「開く」を選択</p>
+            </div>
+            
+            <!-- キャンバスラッパー -->
+            <div id="canvas-wrapper" class="absolute w-full h-full flex items-center justify-center pointer-events-none">
+                <canvas id="editor-canvas" class="hidden pointer-events-auto cursor-grab"></canvas>
+            </div>
+
+            <!-- アクションバー（選択時・トリミング時のみ表示） -->
+            <div id="action-bar" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 px-4 py-2 rounded-full shadow-xl flex items-center gap-3 border border-neutral-700 hidden z-30">
+                <span id="action-label" class="text-xs font-medium text-neutral-300 mr-2">範囲選択中</span>
+                <button onclick="applyCurrentAction()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1">
+                    <i class="ph ph-check"></i> 適用
+                </button>
+                <button onclick="cancelAction()" class="bg-neutral-700 hover:bg-neutral-600 text-neutral-300 text-xs px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1">
+                    <i class="ph ph-x"></i> キャンセル
+                </button>
+            </div>
+
+            <!-- ズームインジケーター -->
+            <div id="zoom-indicator" class="absolute bottom-4 left-4 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity pointer-events-none font-mono z-20">
+                100%
+            </div>
+            
+            <!-- ロード中 -->
+            <div id="loading" class="absolute inset-0 bg-neutral-950/80 hidden items-center justify-center z-50">
+                <i class="ph ph-spinner animate-spin text-3xl text-neutral-400"></i>
+            </div>
+        </main>
+
+        <!-- 右サイドバー（調整パネル） -->
+        <aside class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col shrink-0 overflow-y-auto z-10 custom-scroll">
+            
+            <!-- 部分調整パネル -->
+            <div id="panel-local" class="px-6 py-5 border-b border-neutral-800 bg-neutral-900/50 relative">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xs font-bold tracking-widest text-blue-400 uppercase flex items-center gap-2">
+                        <i class="ph ph-selection-plus"></i> Local Adjustments
+                    </h2>
+                    <span class="text-[10px] text-neutral-500 bg-neutral-800 px-2 py-0.5 rounded">選択範囲のみ</span>
+                </div>
+                
+                <!-- オーバーレイ（選択していない時は操作不可にする） -->
+                <div id="local-disabled-overlay" class="absolute inset-0 bg-neutral-900/80 z-20 flex items-center justify-center backdrop-blur-[1px] transition-opacity duration-300">
+                    <p class="text-xs text-neutral-400 text-center px-4">
+                        <i class="ph ph-cursor-click mb-1 block text-lg"></i>
+                        範囲選択ツールまたは<br>トリミングツールを使用してください
+                    </p>
+                </div>
+
+                <!-- ぼかし -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">ぼかし</span>
+                        <input type="number" id="num-localBlur" value="0" min="0" max="50" step="1">
+                    </div>
+                    <input type="range" id="localBlur" min="0" max="50" value="0" step="1" class="control-slider">
+                </div>
+
+                <!-- モザイク -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">モザイク</span>
+                        <input type="number" id="num-localMosaic" value="0" min="0" max="100">
+                    </div>
+                    <input type="range" id="localMosaic" min="0" max="100" value="0" step="1" class="control-slider">
+                </div>
+
+                <p class="text-[10px] text-neutral-500 mt-2 leading-relaxed">
+                    <i class="ph ph-info"></i> 調整後、「適用」ボタンを押すと画像に効果が定着します。
+                </p>
+            </div>
+
+            <!-- 全体調整パネル -->
+            <div class="px-6 py-5 border-b border-neutral-800">
+                <h2 class="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Global Light & Color</h2>
+                
+                <!-- 露光量 -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">露光量</span>
+                        <input type="number" id="num-brightness" value="0" min="-100" max="100">
+                    </div>
+                    <input type="range" id="brightness" min="-100" max="100" value="0" class="control-slider">
+                </div>
+
+                <!-- コントラスト -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">コントラスト</span>
+                        <input type="number" id="num-contrast" value="0" min="-100" max="100">
+                    </div>
+                    <input type="range" id="contrast" min="-100" max="100" value="0" class="control-slider">
+                </div>
+
+                <!-- 彩度 -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">彩度</span>
+                        <input type="number" id="num-saturation" value="0" min="-100" max="100">
+                    </div>
+                    <input type="range" id="saturation" min="-100" max="100" value="0" class="control-slider">
+                </div>
+
+                 <!-- 色温度 -->
+                 <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">色温度</span>
+                        <input type="number" id="num-temperature" value="0" min="-50" max="50">
+                    </div>
+                    <div class="relative h-1 w-full rounded-full bg-gradient-to-r from-blue-900 via-neutral-600 to-orange-900 mb-2 top-3 pointer-events-none"></div>
+                    <input type="range" id="temperature" min="-50" max="50" value="0" class="control-slider relative z-10">
+                </div>
+            </div>
+
+            <div class="px-6 py-5">
+                <h2 class="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Global Effects</h2>
+                
+                <!-- 粒子 -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">粒子 (Grain)</span>
+                        <input type="number" id="num-grain" value="0" min="0" max="100">
+                    </div>
+                    <input type="range" id="grain" min="0" max="100" value="0" class="control-slider">
+                </div>
+
+                 <!-- 周辺減光 -->
+                 <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">周辺減光 (Vignette)</span>
+                        <input type="number" id="num-vignette" value="0" min="0" max="100">
+                    </div>
+                    <input type="range" id="vignette" min="0" max="100" value="0" class="control-slider">
+                </div>
+            </div>
+
+            <div class="mt-auto p-6 text-center">
+                <p class="text-[10px] text-neutral-600">M3-PhotoEditor Pro v2.1</p>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // --- 状態管理クラス ---
+        class HistoryManager {
+            constructor() {
+                this.undoStack = [];
+                this.redoStack = [];
+                this.limit = 20;
+            }
+
+            push(state) {
+                this.undoStack.push(state);
+                if (this.undoStack.length > this.limit) this.undoStack.shift();
+                this.redoStack = []; // 新しい操作をしたらredoはクリア
+                this.updateButtons();
+            }
+
+            undo() {
+                if (this.undoStack.length <= 1) return null; // 初期状態は残す
+                const current = this.undoStack.pop();
+                this.redoStack.push(current);
+                this.updateButtons();
+                return this.undoStack[this.undoStack.length - 1];
+            }
+
+            redo() {
+                if (this.redoStack.length === 0) return null;
+                const next = this.redoStack.pop();
+                this.undoStack.push(next);
+                this.updateButtons();
+                return next;
+            }
+
+            updateButtons() {
+                document.getElementById('btn-undo').disabled = this.undoStack.length <= 1;
+                document.getElementById('btn-redo').disabled = this.redoStack.length === 0;
+            }
+
+            reset() {
+                this.undoStack = [];
+                this.redoStack = [];
+                this.updateButtons();
+            }
+        }
+
+        // --- メインロジック ---
+        
+        // DOM要素
+        const canvas = document.getElementById('editor-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+        const uploadInput = document.getElementById('upload-input');
+        const downloadBtn = document.getElementById('download-btn');
+        const placeholderMsg = document.getElementById('placeholder-msg');
+        const loadingOverlay = document.getElementById('loading');
+        const dropZone = document.getElementById('drop-zone');
+        
+        // ツール関連DOM
+        const toolBtns = {
+            hand: document.getElementById('tool-hand'),
+            select: document.getElementById('tool-select'),
+            crop: document.getElementById('tool-crop')
+        };
+        const actionBar = document.getElementById('action-bar');
+        const actionLabel = document.getElementById('action-label');
+        const localPanelOverlay = document.getElementById('local-disabled-overlay');
+
+        // アプリ状態
+        const history = new HistoryManager();
+        let isImageLoaded = false;
+        let currentMode = 'hand'; // 'hand' | 'select' | 'crop'
+        let currentFileName = 'm3_pro_edited'; // デフォルトファイル名
+        
+        // 作業用変数
+        let baseImage = null; // 現在の履歴先端の画像 (ImageBitmap or HTMLImageElement)
+        
+        let viewState = {
+            scale: 1, x: 0, y: 0,
+            isDragging: false, lastX: 0, lastY: 0
+        };
+
+        let selectionState = {
+            active: false,
+            isSelecting: false,
+            startX: 0, startY: 0,
+            rect: { x: 0, y: 0, w: 0, h: 0 }
+        };
+
+        // パラメータ (Global & Local)
+        const globalParams = {
+            brightness: 0, contrast: 0, saturation: 0,
+            temperature: 0, grain: 0, vignette: 0
+        };
+        
+        const localParams = {
+            blur: 0, mosaic: 0
+        };
+
+        // --- 初期化 & イベントリスナー ---
+
+        // モード切替
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // ボタンの見た目更新
+            Object.keys(toolBtns).forEach(k => {
+                toolBtns[k].classList.toggle('active', k === mode);
+            });
+
+            // カーソル更新
+            if (mode === 'hand') {
+                canvas.style.cursor = 'grab';
+                canvasWrapper.style.cursor = 'grab';
+                cancelAction(); // 選択解除
+            } else {
+                canvas.style.cursor = 'crosshair';
+                canvasWrapper.style.cursor = 'crosshair';
+            }
+
+            // 右パネルの有効化制御
+            if (mode === 'select') {
+                localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
+            } else {
+                localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            }
+            
+            // トリミングモード時は選択をクリアして案内を表示
+            if (mode === 'crop') {
+                 cancelAction();
+                 localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                 // メッセージ変更
+                 localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-crop mb-1 block text-lg"></i>トリミング範囲を選択して<br>「適用」を押してください';
+            } else if (mode !== 'select') {
+                 localPanelOverlay.querySelector('p').innerHTML = '<i class="ph ph-cursor-click mb-1 block text-lg"></i>範囲選択ツールまたは<br>トリミングツールを使用してください';
+            }
+        }
+        
+        toolBtns.hand.addEventListener('click', () => setMode('hand'));
+        toolBtns.select.addEventListener('click', () => setMode('select'));
+        toolBtns.crop.addEventListener('click', () => setMode('crop'));
+
+        // パラメータ変更監視
+        function getElementId(prefix, key) {
+            // キャメルケース変換: local + blur -> localBlur
+            if (!prefix) return key;
+            return prefix + key.charAt(0).toUpperCase() + key.slice(1);
+        }
+
+        function setupParamListeners(paramsObj, prefix) {
+            Object.keys(paramsObj).forEach(key => {
+                const id = getElementId(prefix, key);
+                const slider = document.getElementById(id);
+                const numInput = document.getElementById('num-' + id);
+
+                if (slider && numInput) {
+                    slider.addEventListener('input', (e) => {
+                        const val = parseFloat(e.target.value);
+                        paramsObj[key] = val;
+                        numInput.value = val;
+                        requestAnimationFrame(() => render());
+                    });
+                    numInput.addEventListener('input', (e) => {
+                        let val = parseFloat(e.target.value);
+                        if (isNaN(val)) return;
+                        paramsObj[key] = val;
+                        slider.value = val;
+                        requestAnimationFrame(() => render());
+                    });
+                } else {
+                    console.warn(`Element not found: ${id}`);
+                }
+            });
+        }
+        setupParamListeners(globalParams, '');
+        setupParamListeners(localParams, 'local'); // id="localBlur" etc
+
+        // ファイルアップロード
+        uploadInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('bg-neutral-900'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('bg-neutral-900'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-neutral-900');
+            if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]);
+        });
+
+        function loadFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            
+            // 拡張子を除いたファイル名を保存
+            currentFileName = file.name.replace(/\.[^/.]+$/, "");
+
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = async () => {
+                    // 初期状態の構築
+                    baseImage = await createImageBitmap(img);
+                    
+                    canvas.width = baseImage.width;
+                    canvas.height = baseImage.height;
+                    
+                    isImageLoaded = true;
+                    placeholderMsg.style.display = 'none';
+                    canvas.classList.remove('hidden');
+                    downloadBtn.disabled = false;
+                    
+                    // 履歴初期化
+                    history.reset();
+                    // 初期状態を保存（パラメータも含める）
+                    saveHistoryState();
+
+                    resetView();
+                    setMode('hand'); // 初期はハンドツール
+                    resetParams(globalParams);
+                    resetParams(localParams);
+                    
+                    loadingOverlay.classList.add('hidden');
+                    loadingOverlay.classList.remove('flex');
+                    render();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- コア機能: 履歴管理 ---
+        
+        async function saveHistoryState() {
+            // 一時Canvasを作って画像データを抽出
+            const tmpCanvas = document.createElement('canvas');
+            tmpCanvas.width = baseImage.width;
+            tmpCanvas.height = baseImage.height;
+            const tmpCtx = tmpCanvas.getContext('2d');
+            tmpCtx.drawImage(baseImage, 0, 0);
+            const imageData = tmpCtx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
+            
+            // パラメータも保存（Deep Copy）
+            const state = {
+                imageData: imageData,
+                globalParams: { ...globalParams }
+            };
+            
+            history.push(state);
+        }
+
+        async function restoreState(state) {
+            if (!state) return;
+            
+            // 画像データの復元
+            baseImage = await createImageBitmap(state.imageData);
+            canvas.width = baseImage.width;
+            canvas.height = baseImage.height;
+            
+            // パラメータ復元
+            Object.assign(globalParams, state.globalParams);
+            updateInputDisplays(globalParams, '');
+            
+            // ローカルパラメータと選択範囲はリセット
+            resetParams(localParams);
+            cancelAction();
+            
+            resetView();
+            render();
+        }
+
+        window.undo = async () => {
+            const state = history.undo();
+            if (state) await restoreState(state);
+        };
+
+        window.redo = async () => {
+            const state = history.redo();
+            if (state) await restoreState(state);
+        };
+
+
+        // --- コア機能: 適用(Apply) ---
+
+        window.applyCurrentAction = async () => {
+            if (!selectionState.active) return;
+            
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+
+            // 処理を次フレームに回してUIブロック回避
+            setTimeout(async () => {
+                if (currentMode === 'select') {
+                    await applyLocalEffect();
+                } else if (currentMode === 'crop') {
+                    await applyCrop();
+                }
+                
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+                
+                // 完了フラッシュアニメーション
+                const flash = document.createElement('div');
+                flash.className = 'absolute inset-0 bg-white pointer-events-none flash-overlay z-50';
+                document.body.appendChild(flash);
+                setTimeout(() => flash.remove(), 500);
+
+            }, 10);
+        };
+
+        window.cancelAction = () => {
+            selectionState.active = false;
+            selectionState.rect = { x: 0, y: 0, w: 0, h: 0 };
+            actionBar.classList.add('hidden');
+            resetParams(localParams); // ローカル調整値もリセット
+            render();
+        };
+
+        // 部分補正の焼き付け
+        async function applyLocalEffect() {
+            // 現在のbaseImageに対して、ローカルエフェクトを焼き付ける
+            const tmpCanvas = document.createElement('canvas');
+            tmpCanvas.width = baseImage.width;
+            tmpCanvas.height = baseImage.height;
+            const tmpCtx = tmpCanvas.getContext('2d');
+            
+            // 1. ベースを描画
+            tmpCtx.drawImage(baseImage, 0, 0);
+            
+            // 2. 選択範囲のエフェクトを描画
+            const rect = selectionState.rect;
+            const params = localParams;
+            
+            if (params.mosaic > 0 || params.blur > 0) {
+                tmpCtx.save();
+                tmpCtx.beginPath();
+                tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
+                tmpCtx.clip();
+                
+                // モザイク
+                if (params.mosaic > 0) {
+                    const mosaicFactor = Math.max(0.005, 1 - (params.mosaic / 105));
+                    const sw = Math.floor(tmpCanvas.width * mosaicFactor);
+                    const sh = Math.floor(tmpCanvas.height * mosaicFactor);
+                    
+                    const offC = document.createElement('canvas');
+                    offC.width = Math.max(1, sw);
+                    offC.height = Math.max(1, sh);
+                    const offCx = offC.getContext('2d');
+                    offCx.drawImage(tmpCanvas, 0, 0, offC.width, offC.height);
+                    
+                    tmpCtx.imageSmoothingEnabled = false;
+                    tmpCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, tmpCanvas.width, tmpCanvas.height);
+                    tmpCtx.imageSmoothingEnabled = true;
+                }
+
+                // ぼかし
+                if (params.blur > 0) {
+                    tmpCtx.filter = `blur(${params.blur}px)`;
+                    // 自分自身を重ねる
+                    tmpCtx.drawImage(tmpCanvas, 0, 0); 
+                    tmpCtx.filter = 'none';
+                }
+                
+                tmpCtx.restore();
+            }
+            
+            // 画像更新
+            baseImage = await createImageBitmap(tmpCanvas);
+            
+            // 履歴保存
+            await saveHistoryState();
+            
+            // 状態リセット
+            cancelAction();
+        }
+
+        // トリミング実行
+        async function applyCrop() {
+            const rect = selectionState.rect;
+            if (rect.w < 1 || rect.h < 1) return;
+            
+            // ImageBitmap.createImageBitmap(image, sx, sy, sw, sh) を使用
+            // 範囲チェック
+            const x = Math.max(0, rect.x);
+            const y = Math.max(0, rect.y);
+            const w = Math.min(rect.w, baseImage.width - x);
+            const h = Math.min(rect.h, baseImage.height - y);
+            
+            if (w <= 0 || h <= 0) return;
+
+            baseImage = await createImageBitmap(baseImage, x, y, w, h);
+            canvas.width = w;
+            canvas.height = h;
+            
+            await saveHistoryState();
+            cancelAction();
+            resetView(); // トリミング後はフィットさせる
+        }
+
+
+        // --- 描画ループ ---
+        
+        function render(isExport = false) {
+            if (!isImageLoaded || !baseImage) return;
+
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+            
+            // A. 全体フィルタの設定（非破壊）
+            const gp = globalParams;
+            let filterStr = `brightness(${100 + gp.brightness}%) contrast(${100 + gp.contrast}%) saturate(${100 + gp.saturation}%)`;
+            
+            ctx.filter = filterStr;
+            ctx.drawImage(baseImage, 0, 0);
+            ctx.filter = 'none';
+
+            // B. プレビュー描画（選択範囲のエフェクト）
+            // 確定前なので、Canvas上で一時的に描画して見せる
+            if (selectionState.active && currentMode === 'select') {
+                const lp = localParams;
+                const rect = selectionState.rect;
+                
+                if (lp.mosaic > 0 || lp.blur > 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+                    ctx.clip();
+                    
+                    // モザイクプレビュー
+                    if (lp.mosaic > 0) {
+                        const mosaicFactor = Math.max(0.005, 1 - (lp.mosaic / 105));
+                        const sw = Math.floor(w * mosaicFactor);
+                        const sh = Math.floor(h * mosaicFactor);
+                        
+                        const offC = document.createElement('canvas');
+                        offC.width = Math.max(1, sw);
+                        offC.height = Math.max(1, sh);
+                        const offCtx = offC.getContext('2d');
+                        
+                        offCtx.filter = filterStr;
+                        offCtx.drawImage(baseImage, 0, 0, offC.width, offC.height);
+                        
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h);
+                        ctx.imageSmoothingEnabled = true;
+                    }
+                    
+                    // ぼかしプレビュー
+                    if (lp.blur > 0) {
+                        ctx.filter = `${filterStr} blur(${lp.blur}px)`;
+                        ctx.drawImage(baseImage, 0, 0, w, h);
+                        ctx.filter = 'none';
+                    }
+                    
+                    ctx.restore();
+                }
+            }
+
+            // C. トリミングプレビュー（白枠のみ）
+            if (selectionState.active && currentMode === 'crop') {
+                if (!isExport) {
+                    const r = selectionState.rect;
+                    // 白い破線
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2 / viewState.scale;
+                    ctx.setLineDash([8 / viewState.scale, 8 / viewState.scale]); 
+                    ctx.strokeRect(r.x, r.y, r.w, r.h);
+                    ctx.setLineDash([]);
+                }
+            }
+
+            // D. オーバーレイエフェクト（全体）
+            ctx.save();
+            // 色温度
+            if (gp.temperature !== 0) {
+                ctx.globalCompositeOperation = 'overlay';
+                ctx.fillStyle = gp.temperature > 0 
+                    ? `rgba(255, 160, 0, ${Math.abs(gp.temperature) / 150})`
+                    : `rgba(0, 100, 255, ${Math.abs(gp.temperature) / 150})`;
+                ctx.fillRect(0, 0, w, h);
+            }
+            // 粒子
+            if (gp.grain > 0) {
+                drawGrain(ctx, w, h, gp.grain);
+            }
+            // 周辺減光
+            if (gp.vignette > 0) {
+                ctx.globalCompositeOperation = 'multiply';
+                const radius = Math.max(w, h) / 1.5;
+                const gradient = ctx.createRadialGradient(w/2, h/2, radius * 0.4, w/2, h/2, radius);
+                const alpha = gp.vignette / 100;
+                gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                gradient.addColorStop(1, `rgba(0,0,0,${alpha})`);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, w, h);
+            }
+            ctx.restore();
+
+            // E. 選択範囲のUI枠線 (Export時、およびトリミングモード以外で表示)
+            // トリミングモードは上で独自に描画しているので除外
+            if (!isExport && selectionState.active && currentMode !== 'crop') {
+                const r = selectionState.rect;
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1.5 / viewState.scale;
+                ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
+                ctx.strokeRect(r.x, r.y, r.w, r.h);
+                
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                ctx.lineDashOffset = 5 / viewState.scale;
+                ctx.strokeRect(r.x, r.y, r.w, r.h);
+            }
+        }
+
+        // ノイズ生成（再利用可能に）
+        const grainCanvas = document.createElement('canvas');
+        grainCanvas.width = 256; grainCanvas.height = 256;
+        const grainCtx = grainCanvas.getContext('2d');
+        
+        function drawGrain(targetCtx, w, h, strength) {
+            // パターン更新（強度が変わった時だけ再生成してもいいが、簡易的に毎回やるか、あるいはキャッシュするか）
+            // ここでは簡易実装
+            const imageData = grainCtx.createImageData(256, 256);
+            const data = imageData.data;
+            const alpha = (strength / 100) * 100; 
+
+            for (let i = 0; i < data.length; i += 4) {
+                const val = (Math.random() - 0.5) * alpha;
+                data[i] = 128 + val; data[i+1] = 128 + val; data[i+2] = 128 + val; data[i+3] = 255;
+            }
+            grainCtx.putImageData(imageData, 0, 0);
+
+            targetCtx.globalCompositeOperation = 'overlay';
+            targetCtx.fillStyle = targetCtx.createPattern(grainCanvas, 'repeat');
+            targetCtx.fillRect(0, 0, w, h);
+            targetCtx.globalCompositeOperation = 'source-over';
+        }
+
+        // --- マウス操作 ---
+
+        // ビューリセット
+        window.resetView = () => {
+            if(!isImageLoaded || !baseImage) return;
+            const containerW = dropZone.clientWidth;
+            const containerH = dropZone.clientHeight;
+            const scaleW = (containerW - 64) / baseImage.width;
+            const scaleH = (containerH - 64) / baseImage.height;
+            viewState.scale = Math.min(scaleW, scaleH, 1);
+            viewState.x = 0; viewState.y = 0;
+            updateCanvasTransform();
+        };
+
+        function updateCanvasTransform() {
+            canvas.style.transform = `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.scale})`;
+            document.getElementById('zoom-indicator').textContent = Math.round(viewState.scale * 100) + '%';
+            document.getElementById('zoom-indicator').style.opacity = '1';
+            clearTimeout(window.zoomTimer);
+            window.zoomTimer = setTimeout(() => document.getElementById('zoom-indicator').style.opacity = '0', 1500);
+        }
+
+        // ズーム
+        dropZone.addEventListener('wheel', (e) => {
+            if (!isImageLoaded) return;
+            e.preventDefault();
+            const newScale = viewState.scale * (1 - e.deltaY * 0.001);
+            viewState.scale = Math.min(Math.max(newScale, 0.05), 50);
+            updateCanvasTransform();
+        }, { passive: false });
+
+        // マウスダウン
+        canvas.addEventListener('mousedown', (e) => {
+            if (!isImageLoaded) return;
+            
+            if (currentMode === 'hand' || e.button === 1 || e.spaceKey) {
+                viewState.isDragging = true;
+                viewState.lastX = e.clientX;
+                viewState.lastY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            } else if (currentMode === 'select' || currentMode === 'crop') {
+                selectionState.isSelecting = true;
+                const rect = canvas.getBoundingClientRect();
+                const rawX = (e.clientX - rect.left) / viewState.scale;
+                const rawY = (e.clientY - rect.top) / viewState.scale;
+                selectionState.startX = rawX;
+                selectionState.startY = rawY;
+                selectionState.rect = { x: rawX, y: rawY, w: 0, h: 0 };
+                selectionState.active = false; // ドラッグ開始時は非アクティブ化
+                actionBar.classList.add('hidden');
+            }
+        });
+
+        // マウスムーブ
+        window.addEventListener('mousemove', (e) => {
+            if (!isImageLoaded) return;
+
+            if (viewState.isDragging) {
+                const dx = e.clientX - viewState.lastX;
+                const dy = e.clientY - viewState.lastY;
+                viewState.x += dx;
+                viewState.y += dy;
+                viewState.lastX = e.clientX;
+                viewState.lastY = e.clientY;
+                updateCanvasTransform();
+            } else if (selectionState.isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const currentX = (e.clientX - rect.left) / viewState.scale;
+                const currentY = (e.clientY - rect.top) / viewState.scale;
+                
+                const w = currentX - selectionState.startX;
+                const h = currentY - selectionState.startY;
+
+                selectionState.rect = {
+                    x: w > 0 ? selectionState.startX : currentX,
+                    y: h > 0 ? selectionState.startY : currentY,
+                    w: Math.abs(w),
+                    h: Math.abs(h)
+                };
+                selectionState.active = true;
+                render();
+            }
+        });
+
+        // マウスアップ
+        window.addEventListener('mouseup', () => {
+            if (viewState.isDragging) {
+                viewState.isDragging = false;
+                canvas.style.cursor = currentMode === 'hand' ? 'grab' : 'crosshair';
+            }
+            if (selectionState.isSelecting) {
+                selectionState.isSelecting = false;
+                if (selectionState.rect.w > 5 && selectionState.rect.h > 5) {
+                    selectionState.active = true;
+                    // アクションバー表示
+                    actionBar.classList.remove('hidden');
+                    if (currentMode === 'crop') {
+                        actionLabel.textContent = 'トリミング範囲';
+                        localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); // crop中はパネル無効のまま
+                    } else {
+                        actionLabel.textContent = '選択範囲';
+                        // 選択完了したらパラメータパネルを有効化
+                        localPanelOverlay.classList.add('opacity-0', 'pointer-events-none');
+                        // パラメータリセット
+                        resetParams(localParams);
+                    }
+                } else {
+                    selectionState.active = false;
+                }
+                render();
+            }
+        });
+
+        // その他ユーティリティ
+        function resetParams(paramsObj) {
+            Object.keys(paramsObj).forEach(k => paramsObj[k] = 0);
+            updateInputDisplays(paramsObj, paramsObj === localParams ? 'local' : '');
+        }
+
+        function updateInputDisplays(paramsObj, prefix) {
+            Object.keys(paramsObj).forEach(key => {
+                const id = getElementId(prefix, key);
+                const slider = document.getElementById(id);
+                const num = document.getElementById('num-' + id);
+                if (slider) slider.value = paramsObj[key];
+                if (num) num.value = paramsObj[key];
+            });
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            if (!isImageLoaded) return;
+            render(true);
+
+            // 日時スタンプ生成 (YYYYMMDD-HHmmss)
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `${y}${m}${d}-${h}${min}${s}`;
+
+            const link = document.createElement('a');
+            link.download = `${currentFileName}-${timestamp}.png`;
+            link.href = canvas.toDataURL('image/png', 0.9);
+            link.click();
+            render();
+        });
+
+        // プリセット (全体補正のみリセットして適用)
+        window.applyPreset = (type) => {
+            if (!isImageLoaded) return;
+            
+            // リセット時の確認
+            if (type === 'default') {
+                if (!confirm('現在の編集パラメータをリセットしますか？')) return;
+            }
+
+            resetParams(globalParams);
+            switch(type) {
+                case 'bw': globalParams.saturation = -100; globalParams.contrast = 15; break;
+                case 'warm': globalParams.temperature = 30; globalParams.saturation = 10; break;
+                case 'cool': globalParams.temperature = -30; globalParams.contrast = 10; break;
+                case 'film': globalParams.contrast = -10; globalParams.brightness = 5; globalParams.saturation = -20; globalParams.temperature = 10; globalParams.grain = 30; globalParams.vignette = 40; break;
+            }
+            updateInputDisplays(globalParams, '');
+            render();
+        };
+
+        // 初期化
+        updateInputDisplays(globalParams, '');
+        updateInputDisplays(localParams, 'local');
+
+    </script>
+</body>
+</html>
