@@ -369,7 +369,6 @@
                 this.undoStack = []; this.redoStack = []; this.limit = 25;
             }
             push(state) {
-                // 深いコピーでパラメータを保存
                 const safeState = {
                     imageData: state.imageData,
                     globalParams: JSON.parse(JSON.stringify(state.globalParams))
@@ -483,11 +482,8 @@
                         paramsObj[key] = parseFloat(e.target.value); numInput.value = e.target.value;
                         requestAnimationFrame(() => render());
                     });
-                    // 手を離した時に履歴を保存 (グローバルパラメータのみ)
                     if (!prefix) {
-                        slider.addEventListener('change', () => {
-                            if (isImageLoaded) saveHistoryState();
-                        });
+                        slider.addEventListener('change', () => { if (isImageLoaded) saveHistoryState(); });
                     }
                     numInput.addEventListener('input', (e) => {
                         let val = parseFloat(e.target.value); if (isNaN(val)) return;
@@ -495,9 +491,7 @@
                         requestAnimationFrame(() => render());
                     });
                     if (!prefix) {
-                        numInput.addEventListener('change', () => {
-                            if (isImageLoaded) saveHistoryState();
-                        });
+                        numInput.addEventListener('change', () => { if (isImageLoaded) saveHistoryState(); });
                     }
                 }
             });
@@ -742,6 +736,12 @@
         const grainCanvas = document.createElement('canvas'); grainCanvas.width = 256; grainCanvas.height = 256;
         const grainCtx = grainCanvas.getContext('2d');
 
+        dropZone.addEventListener('wheel', (e) => {
+            if (!isImageLoaded) return; e.preventDefault();
+            const ns = viewState.scale * (1 - e.deltaY * 0.001);
+            viewState.scale = Math.min(Math.max(ns, 0.05), 50); updateCanvasTransform();
+        }, { passive: false });
+
         function getHandleUnderMouse(mx, my) {
             if (!selectionState.active) return null;
             const r = selectionState.rect; const cx = r.x+r.w/2, cy = r.y+r.h/2;
@@ -828,8 +828,12 @@
         downloadBtn.addEventListener('click', () => {
             if (!isImageLoaded) return; render(true);
             const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-            const link = document.createElement('a'); link.download = `${currentFileName}-${ts}.png`;
-            link.href = canvas.toDataURL('image/png', 0.9); link.click(); render();
+            const link = document.createElement('a'); 
+            link.download = `${currentFileName}-${ts}.jpg`;
+            // JPEG形式で品質0.92で出力
+            link.href = canvas.toDataURL('image/jpeg', 0.92); 
+            link.click(); 
+            render();
         });
 
         window.applyPreset = (type) => {
