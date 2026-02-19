@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3-PhotoEditor Ver.1.2</title>
+    <title>M3-PhotoEditor Ver.1.5</title>
     <!-- M3を活かしたシンプルでカッコイイWebアイコンの設定 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='black'/><rect x='12' y='12' width='76' height='76' rx='10' fill='none' stroke='white' stroke-width='1.5' opacity='0.4'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui, sans-serif' font-weight='900' font-size='48' letter-spacing='-2'>M3</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -59,6 +59,41 @@
         /* アニメーション */
         @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
         .flash-overlay { animation: flash 0.5s ease-out forwards; }
+        
+        /* AI Tag Styles - サイズ調整 */
+        .ai-tag {
+            border: 1px solid #404040;
+            background-color: #262626;
+            color: #a3a3a3;
+            transition: all 0.2s;
+            cursor: pointer;
+            user-select: none;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .ai-tag:hover { border-color: #8b5cf6; background-color: #4c1d95; color: #fff; }
+        .ai-tag.selected {
+            background-color: #8b5cf6; /* Violet-500 */
+            border-color: #8b5cf6;
+            color: white;
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+        }
+
+        /* カテゴリ見出し & パラメータラベル */
+        .category-header, .param-label {
+            cursor: pointer;
+            transition: color 0.2s;
+            position: relative;
+        }
+        .category-header:hover, .param-label:hover {
+            color: #d4d4d4;
+        }
+        .category-header:hover::after, .param-label:hover::after {
+            content: ' ↺';
+            font-size: 10px;
+            opacity: 0.7;
+            margin-left: 4px;
+        }
 
         /* チェックボックス */
         .custom-checkbox {
@@ -81,6 +116,21 @@
 
         /* 比較ボタンの長押し用スタイル */
         #compare-btn:active { background-color: #2563eb !important; color: white !important; transform: scale(0.95); }
+        
+        /* サイドバー切り替えアニメーション */
+        .sidebar-content {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .sidebar-content.hidden-content {
+            display: none;
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        .sidebar-content.active-content {
+            display: flex;
+            opacity: 1;
+            transform: translateX(0);
+        }
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-300 font-sans h-screen flex flex-col overflow-hidden selection:bg-neutral-600 selection:text-white">
@@ -159,14 +209,22 @@
     </header>
 
     <!-- メインエリア -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden relative">
         
-        <!-- 左サイドバー（プリセット） -->
-        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-4 shrink-0 z-10 hidden sm:flex overflow-y-auto overflow-x-hidden custom-scroll">
+        <!-- 左サイドバー（プリセット & AIパネル） -->
+        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-4 shrink-0 z-10 hidden sm:flex overflow-y-auto overflow-x-hidden custom-scroll transition-all duration-300" id="left-sidebar" style="width: 4rem;">
             
-            <span class="text-[10px] font-bold text-neutral-500 tracking-widest mt-1">FILTER</span>
+            <!-- Magic Style ボタン -->
+            <button onclick="toggleAIMode()" id="btn-magic-style" class="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 text-blue-400 hover:bg-blue-900/30 hover:text-blue-300 hover:border-blue-500/50 flex items-center justify-center transition-all shadow-lg group relative mb-2 shrink-0" title="Magic Style (AI自動アレンジ)">
+                <i class="ph ph-sparkle text-xl group-hover:scale-110 transition-transform"></i>
+            </button>
 
-            <div class="flex flex-col gap-3 pb-4">
+            <div class="w-8 h-px bg-neutral-800 shrink-0"></div>
+
+            <!-- 通常フィルター一覧 (Mode A) -->
+            <div id="sidebar-presets" class="flex-col gap-3 pb-4 flex w-full items-center sidebar-content active-content">
+                <span class="text-[10px] font-bold text-neutral-500 tracking-widest mt-1">STYLE</span>
+                
                 <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
                     <span class="font-serif font-bold text-xs">BW</span>
                 </button>
@@ -192,6 +250,48 @@
                     <i class="ph ph-lightning text-purple-400"></i>
                 </button>
             </div>
+
+            <!-- Magic Style パネル (Mode B) -->
+            <div id="ai-panel" class="flex-col w-full px-4 gap-4 pb-4 sidebar-content hidden-content hidden overflow-y-auto">
+                
+                <div class="flex justify-between items-center mb-2 pb-2 border-b border-neutral-700">
+                    <h4 class="text-xs font-bold text-neutral-400 tracking-wider">Magic Style</h4>
+                     <button onclick="toggleAIMode()" class="text-neutral-500 hover:text-white" title="閉じる">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-neutral-500 mb-2 leading-tight">キーワードを選んでスタイル作成</p>
+
+                <!-- TONE -->
+                <div class="mb-1">
+                    <h4 class="text-[10px] font-bold text-neutral-500 tracking-widest mb-2 category-header" ondblclick="resetCategory('light')" title="ダブルクリックでこのカテゴリをリセット">TONE</h4>
+                    <div id="ai-tags-tone" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- COLOR -->
+                <div class="mb-1">
+                    <h4 class="text-[10px] font-bold text-neutral-500 tracking-widest mb-2 category-header" ondblclick="resetCategory('color')" title="ダブルクリックでこのカテゴリをリセット">COLOR</h4>
+                    <div id="ai-tags-color" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- MOOD -->
+                <div class="mb-1">
+                    <h4 class="text-[10px] font-bold text-neutral-500 tracking-widest mb-2 category-header" ondblclick="resetCategory('style')" title="ダブルクリックでこのカテゴリをリセット">MOOD</h4>
+                    <div id="ai-tags-mood" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- 強度スライダー (下に移動) -->
+                <div class="bg-neutral-800/80 p-3 rounded-lg border border-neutral-700 mt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-neutral-400">アレンジ強度</span>
+                        <span id="ai-strength-val" class="text-xs font-mono text-purple-400">1.00x</span>
+                    </div>
+                    <!-- 範囲拡大: 0.1 ~ 2.0 -->
+                    <input type="range" id="ai-strength" min="0.1" max="2.0" step="0.05" value="1.0" class="w-full h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer mb-1 accent-purple-500">
+                </div>
+            </div>
+
         </aside>
 
         <!-- キャンバスエリア -->
@@ -230,15 +330,14 @@
             </div>
             
             <!-- ロード中 -->
-            <div id="loading" class="absolute inset-0 bg-neutral-950/80 hidden items-center justify-center z-50">
+            <div id="loading" class="absolute inset-0 bg-neutral-950/80 hidden items-center justify-center z-[70]">
                 <i class="ph ph-spinner animate-spin text-3xl text-neutral-400"></i>
             </div>
         </main>
 
         <!-- 右サイドバー -->
         <aside class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col shrink-0 overflow-y-auto z-10 custom-scroll">
-            
-            <!-- 部分調整パネル -->
+            <!-- パネル群 -->
             <div id="panel-local" class="px-6 py-5 border-b border-neutral-800 bg-neutral-900/50 relative">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xs font-bold tracking-widest text-blue-400 uppercase flex items-center gap-2">
@@ -246,150 +345,130 @@
                     </h2>
                     <span class="text-[10px] text-neutral-500 bg-neutral-800 px-2 py-0.5 rounded">選択範囲のみ</span>
                 </div>
-                
                 <div id="local-disabled-overlay" class="absolute inset-0 bg-neutral-900/80 z-20 flex items-center justify-center backdrop-blur-[1px] transition-opacity duration-300">
                     <p class="text-xs text-neutral-400 text-center px-4">
                         <i class="ph ph-cursor-click mb-1 block text-lg"></i>
                         範囲選択ツールまたは<br>トリミングツールを使用してください
                     </p>
                 </div>
-
                 <div class="mb-5 flex items-center justify-between">
                     <label for="invert-mask" class="text-xs text-neutral-400 cursor-pointer select-none">選択範囲を反転 (外側に適用)</label>
                     <input type="checkbox" id="invert-mask" class="custom-checkbox" onchange="requestAnimationFrame(() => render())">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">ぼかし</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">ぼかし</span>
                         <input type="number" id="num-localBlur" value="0" min="0" max="50" step="1">
                     </div>
                     <input type="range" id="localBlur" min="0" max="50" value="0" step="1" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">モザイク</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">モザイク</span>
                         <input type="number" id="num-localMosaic" value="0" min="0" max="100">
                     </div>
                     <input type="range" id="localMosaic" min="0" max="100" value="0" step="1" class="control-slider">
                 </div>
             </div>
 
-            <!-- 全体調整パネル -->
+            <!-- Global Light & Color -->
             <div class="px-6 py-5 border-b border-neutral-800">
                 <h2 class="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Global Light & Color</h2>
-                <p class="text-[10px] text-neutral-500 mb-4 bg-neutral-800/50 p-2 rounded border border-neutral-800">
-                    <i class="ph ph-info"></i> 項目名をダブルクリックで0にリセット
-                </p>
                 
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">露光量</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">露光量</span>
                         <input type="number" id="num-brightness" value="0" min="-100" max="100">
                     </div>
                     <input type="range" id="brightness" min="-100" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">コントラスト</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">コントラスト</span>
                         <input type="number" id="num-contrast" value="0" min="-100" max="100">
                     </div>
                     <input type="range" id="contrast" min="-100" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">ハイライト</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">ハイライト</span>
                         <input type="number" id="num-highlights" value="0" min="-100" max="100">
                     </div>
                     <input type="range" id="highlights" min="-100" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">シャドウ</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">シャドウ</span>
                         <input type="number" id="num-shadows" value="0" min="-100" max="100">
                     </div>
                     <input type="range" id="shadows" min="-100" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">彩度</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">彩度</span>
                         <input type="number" id="num-saturation" value="0" min="-100" max="100">
                     </div>
                     <input type="range" id="saturation" min="-100" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition text-blue-300">自然な彩度</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition text-blue-300 param-label" title="ダブルクリックでリセット">自然な彩度</span>
                         <input type="number" id="num-vibrance" value="0" min="-100" max="100">
                     </div>
                     <input type="range" id="vibrance" min="-100" max="100" value="0" class="control-slider">
                 </div>
-
                  <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">色温度</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">色温度</span>
                         <input type="number" id="num-temperature" value="0" min="-50" max="50">
                     </div>
-                    <div class="relative h-1 w-full rounded-full bg-gradient-to-r from-blue-900 via-neutral-600 to-orange-900 mb-2 top-3 pointer-events-none"></div>
+                    <div class="relative h-1 w-full rounded-full bg-gradient-to-r from-orange-900 via-neutral-600 to-blue-900 mb-2 top-3 pointer-events-none"></div>
                     <input type="range" id="temperature" min="-50" max="50" value="0" class="control-slider relative z-10">
                 </div>
             </div>
 
             <div class="px-6 py-5">
                 <h2 class="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Creative & Effects</h2>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">色相</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">色相</span>
                         <input type="number" id="num-hue" value="0" min="-180" max="180">
                     </div>
                     <div class="relative h-1 w-full rounded-full bg-gradient-to-r from-red-500 via-green-500 to-blue-500 mb-2 top-3 pointer-events-none opacity-50"></div>
                     <input type="range" id="hue" min="-180" max="180" value="0" class="control-slider relative z-10">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">セピア</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">セピア</span>
                         <input type="number" id="num-sepia" value="0" min="0" max="100">
                     </div>
                     <input type="range" id="sepia" min="0" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">反転</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">反転</span>
                         <input type="number" id="num-invert" value="0" min="0" max="100">
                     </div>
                     <input type="range" id="invert" min="0" max="100" value="0" class="control-slider">
                 </div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">全体ぼかし</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">全体ぼかし</span>
                         <input type="number" id="num-blur" value="0" min="0" max="20" step="0.5">
                     </div>
                     <input type="range" id="blur" min="0" max="20" value="0" step="0.5" class="control-slider">
                 </div>
-                
                 <div class="w-full h-px bg-neutral-800 my-4"></div>
-
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">粒子</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">粒子</span>
                         <input type="number" id="num-grain" value="0" min="0" max="100">
                     </div>
                     <input type="range" id="grain" min="0" max="100" value="0" class="control-slider">
                 </div>
-
                  <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition">周辺減光</span>
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">周辺減光</span>
                         <input type="number" id="num-vignette" value="0" min="0" max="100">
                     </div>
                     <input type="range" id="vignette" min="0" max="100" value="0" class="control-slider">
@@ -398,7 +477,7 @@
 
             <!-- フッター -->
             <div class="mt-auto p-6 text-center shrink-0">
-                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.1.2</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.1.5</p>
                 <p class="text-[10px] text-neutral-600 mt-1 tracking-wider">created by Hayao</p>
             </div>
         </aside>
@@ -468,6 +547,14 @@
         const actionLabel = document.getElementById('action-label');
         const localPanelOverlay = document.getElementById('local-disabled-overlay');
 
+        // AI Panel Elements
+        const leftSidebar = document.getElementById('left-sidebar');
+        const sidebarPresets = document.getElementById('sidebar-presets');
+        const aiPanel = document.getElementById('ai-panel');
+        const aiStrengthSlider = document.getElementById('ai-strength');
+        const aiStrengthVal = document.getElementById('ai-strength-val');
+        const btnMagicStyle = document.getElementById('btn-magic-style');
+
         const history = new HistoryManager();
         let isImageLoaded = false;
         let currentMode = 'hand'; 
@@ -535,9 +622,8 @@
                     });
                     if (!prefix) numInput.addEventListener('change', () => { if (isImageLoaded) saveHistoryState(); });
                     
-                    const label = slider.parentElement.querySelector('span');
+                    const label = slider.parentElement.querySelector('.param-label');
                     if (label) {
-                        label.style.cursor = 'pointer';
                         label.addEventListener('dblclick', () => {
                             paramsObj[key] = 0; slider.value = 0; numInput.value = 0;
                             if (isImageLoaded) saveHistoryState();
@@ -688,7 +774,8 @@
 
             for (let i = 0; i < len; i += 4) {
                 let r = data[i], g = data[i+1], b = data[i+2];
-                if (temperature !== 0) { r += temperature * 1.5; b -= temperature * 1.5; }
+                // 色温度反転 (赤<->青)
+                if (temperature !== 0) { r -= temperature * 1.5; b += temperature * 1.5; }
                 if (highlights !== 0 || shadows !== 0) {
                     let nR = r / 255, nG = g / 255, nB = b / 255;
                     const lum = Math.max(0, Math.min(1, 0.2126 * nR + 0.7152 * nG + 0.0722 * nB));
@@ -723,7 +810,6 @@
             if (!isImageLoaded || !baseImage) return;
             const w = canvas.width; const h = canvas.height; const gp = globalParams;
             
-            // 状態の完全リセット
             ctx.filter = 'none';
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -850,6 +936,29 @@
             return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
         }
 
+        // ズーム処理の修正
+        dropZone.addEventListener('wheel', (e) => {
+            if (!isImageLoaded) return;
+            e.preventDefault();
+            
+            // より滑らかで安全なズーム計算
+            const delta = Math.sign(e.deltaY);
+            const zoomFactor = 0.1;
+
+            if (delta < 0) {
+                // 上回転（拡大）
+                viewState.scale *= (1 + zoomFactor);
+            } else {
+                // 下回転（縮小）
+                viewState.scale *= (1 - zoomFactor);
+            }
+
+            // 制限範囲 (0.05倍 ～ 50倍)
+            viewState.scale = Math.min(Math.max(viewState.scale, 0.05), 50);
+            
+            updateCanvasTransform();
+        }, { passive: false });
+
         dropZone.addEventListener('dragover', (e) => e.preventDefault());
         dropZone.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]); });
         uploadInput.addEventListener('change', (e) => { if (e.target.files.length > 0) loadFile(e.target.files[0]); });
@@ -914,6 +1023,169 @@
             }
         });
 
+        // AI Modal - Magic Style Logic (Ver.2.6 - New Integration)
+        const AI_TAGS = [
+            { id: 'bright', label: '明るく', category: 'light', group: 'brightness', params: { brightness: 15, highlights: 10 } },
+            { id: 'dark', label: '暗く', category: 'light', group: 'brightness', params: { brightness: -15, shadows: -10, contrast: 5 } },
+            { id: 'contrast_high', label: 'くっきり', category: 'light', group: 'contrast', params: { contrast: 15, highlights: 5 } },
+            { id: 'soft', label: 'ふんわり', category: 'light', group: 'contrast', params: { contrast: -10, blur: 0.5, brightness: 5, shadows: 10 } },
+            { id: 'high_key', label: 'ハイキー', category: 'light', group: 'exposure', params: { brightness: 20, contrast: -5, saturation: -10 } },
+            { id: 'low_key', label: 'ローキー', category: 'light', group: 'exposure', params: { brightness: -20, contrast: 15, shadows: -15 } },
+            
+            { id: 'warm', label: '暖色系', category: 'color', group: 'temp', params: { temperature: -20, sepia: 5 } }, 
+            { id: 'cool', label: '寒色系', category: 'color', group: 'temp', params: { temperature: 20, hue: -5 } },
+            { id: 'vivid', label: '鮮やか', category: 'color', group: 'saturation', params: { saturation: 20, vibrance: 25, contrast: 5 } },
+            { id: 'fade', label: '色褪せ', category: 'color', group: 'saturation', params: { saturation: -20, contrast: -5, brightness: 5 } },
+            { id: 'mono', label: 'モノクロ', category: 'color', group: 'saturation', params: { saturation: -100, contrast: 10 } },
+            { id: 'pastel', label: 'パステル', category: 'color', group: 'tone', params: { brightness: 10, saturation: -10, vibrance: 20, contrast: -10 } },
+            { id: 'matte_color', label: 'マット', category: 'color', group: 'tone', params: { shadows: 30, contrast: -10 } },
+
+            { id: 'retro', label: 'レトロ', category: 'style', params: { sepia: 20, grain: 15, vignette: 15, contrast: -5, temperature: -5 } },
+            { id: 'film', label: 'フィルム風', category: 'style', params: { grain: 25, vignette: 20, contrast: 5, brightness: 2, saturation: -10, blur: 0.1 } },
+            { id: 'emo', label: 'エモい', category: 'style', params: { temperature: -10, blur: 0.4, contrast: -10, highlights: -15, vignette: 10, vibrance: 10 } },
+            { id: 'cyber', label: 'サイバー', category: 'style', params: { contrast: 20, saturation: 10, hue: 10, temperature: 15, highlights: 15 } },
+            { id: 'dream', label: '幻想的', category: 'style', params: { blur: 1.2, brightness: 10, vibrance: 15, contrast: -10, highlights: -5 } },
+            { id: 'clear', label: '透明感', category: 'style', params: { brightness: 5, contrast: 5, temperature: 5, saturation: 5, vibrance: 10 } },
+            { id: 'nostalgia', label: 'ノスタルジー', category: 'style', params: { sepia: 15, temperature: -10, grain: 10, saturation: -15 } },
+        ];
+
+        let selectedTags = [];
+        let aiParamsBackup = null;
+
+        function toggleAIMode() {
+            if (!isImageLoaded) return;
+            const sidebarPresets = document.getElementById('sidebar-presets');
+            const aiPanel = document.getElementById('ai-panel');
+            const leftSidebar = document.getElementById('left-sidebar');
+            const btnMagic = document.getElementById('btn-magic-style');
+            
+            // Toggle Logic
+            if (aiPanel.classList.contains('hidden-content')) {
+                // Open AI Panel
+                aiParamsBackup = JSON.parse(JSON.stringify(globalParams)); // Backup
+                sidebarPresets.classList.remove('active-content');
+                sidebarPresets.classList.add('hidden-content');
+                
+                setTimeout(() => {
+                    sidebarPresets.style.display = 'none';
+                    aiPanel.style.display = 'flex';
+                    setTimeout(() => {
+                        aiPanel.classList.remove('hidden-content');
+                        aiPanel.classList.add('active-content');
+                    }, 10);
+                }, 200);
+
+                btnMagic.classList.add('border-blue-500', 'bg-blue-900/30', 'text-blue-300');
+                leftSidebar.style.width = '18rem'; // Expand sidebar width for AI panel
+                renderAITags();
+            } else {
+                // Close AI Panel (Apply)
+                closeAIModal(true);
+            }
+        }
+
+        function closeAIModal(apply = true) { // Default apply is true now (auto-apply)
+            const sidebarPresets = document.getElementById('sidebar-presets');
+            const aiPanel = document.getElementById('ai-panel');
+            const leftSidebar = document.getElementById('left-sidebar');
+            const btnMagic = document.getElementById('btn-magic-style');
+
+            if (apply) {
+                saveHistoryState(); // Save applied state
+            }
+
+            aiPanel.classList.remove('active-content');
+            aiPanel.classList.add('hidden-content');
+
+            setTimeout(() => {
+                aiPanel.style.display = 'none';
+                sidebarPresets.style.display = 'flex';
+                setTimeout(() => {
+                    sidebarPresets.classList.remove('hidden-content');
+                    sidebarPresets.classList.add('active-content');
+                }, 10);
+            }, 200);
+
+            btnMagic.classList.remove('border-blue-500', 'bg-blue-900/30', 'text-blue-300');
+            leftSidebar.style.width = '4rem'; // Restore sidebar width
+            
+            // selectedTags = []; // Keep selection state? Or Reset? Let's keep for re-editing.
+            aiParamsBackup = null;
+        }
+
+        function renderAITags() {
+            const renderCategory = (cat, containerId) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                AI_TAGS.filter(t => t.category === cat).forEach(tag => {
+                    const btn = document.createElement('button');
+                    btn.className = `ai-tag px-3 py-1.5 rounded-full border transition ${selectedTags.includes(tag.id) ? 'selected' : ''}`;
+                    btn.textContent = tag.label;
+                    btn.onclick = () => toggleTag(tag.id);
+                    container.appendChild(btn);
+                });
+            };
+            renderCategory('light', 'ai-tags-tone'); 
+            renderCategory('color', 'ai-tags-color');
+            renderCategory('style', 'ai-tags-mood');
+
+            const strengthSlider = document.getElementById('ai-strength');
+            document.getElementById('ai-strength-val').textContent = strengthSlider.value + 'x';
+            strengthSlider.oninput = (e) => {
+                document.getElementById('ai-strength-val').textContent = e.target.value + 'x';
+                updateAIPreview();
+            };
+        }
+
+        function toggleTag(id) {
+            const tag = AI_TAGS.find(t => t.id === id);
+            if (selectedTags.includes(id)) {
+                selectedTags = selectedTags.filter(t => t !== id);
+            } else {
+                if (tag.group) {
+                    const groupTags = AI_TAGS.filter(t => t.group === tag.group).map(t => t.id);
+                    selectedTags = selectedTags.filter(t => !groupTags.includes(t));
+                }
+                selectedTags.push(id);
+            }
+            renderAITags();
+            updateAIPreview();
+        }
+
+        function resetCategory(cat) {
+             // Filter out tags belonging to this category
+            selectedTags = selectedTags.filter(tagId => {
+                const tag = AI_TAGS.find(t => t.id === tagId);
+                return tag.category !== cat;
+            });
+            renderAITags();
+            updateAIPreview();
+        }
+
+        function updateAIPreview() {
+            if (!aiParamsBackup) return;
+            const strength = parseFloat(document.getElementById('ai-strength').value);
+            Object.assign(globalParams, aiParamsBackup); // Reset to base state
+            
+            selectedTags.forEach(tagId => {
+                const tag = AI_TAGS.find(t => t.id === tagId);
+                if (tag) {
+                    Object.keys(tag.params).forEach(key => {
+                        if (globalParams.hasOwnProperty(key)) {
+                            globalParams[key] += tag.params[key] * strength;
+                        }
+                    });
+                }
+            });
+            
+            updateInputDisplays(globalParams, '');
+            render();
+        }
+
+        function applyAI() {
+            closeAIModal(true);
+        }
+
         const handleCompareOn = (e) => { if(!isImageLoaded) return; e.preventDefault(); render(false, true); };
         const handleCompareOff = (e) => { if(!isImageLoaded) return; render(false, false); };
         compareBtn.addEventListener('mousedown', handleCompareOn);
@@ -937,11 +1209,12 @@
             resetParams(globalParams);
             switch(type) {
                 case 'bw': globalParams.saturation = -100; globalParams.contrast = 15; globalParams.grain = 20; globalParams.vignette = 20; break;
-                case 'warm': globalParams.temperature = 25; globalParams.vibrance = 15; globalParams.sepia = 10; break;
-                case 'cool': globalParams.temperature = -25; globalParams.contrast = 10; globalParams.vibrance = 15; globalParams.hue = -5; break;
-                case 'film': globalParams.contrast = -10; globalParams.brightness = 5; globalParams.saturation = -10; globalParams.vibrance = -10; globalParams.temperature = 10; globalParams.grain = 35; globalParams.vignette = 30; globalParams.blur = 0.5; break;
+                // プリセット値も色温度反転に対応
+                case 'warm': globalParams.temperature = -25; globalParams.vibrance = 15; globalParams.sepia = 10; break;
+                case 'cool': globalParams.temperature = 25; globalParams.contrast = 10; globalParams.vibrance = 15; globalParams.hue = -5; break;
+                case 'film': globalParams.contrast = -10; globalParams.brightness = 5; globalParams.saturation = -10; globalParams.vibrance = -10; globalParams.temperature = -10; globalParams.grain = 35; globalParams.vignette = 30; globalParams.blur = 0.5; break;
                 case 'vivid': globalParams.saturation = 20; globalParams.vibrance = 35; globalParams.contrast = 15; break;
-                case 'retro': globalParams.temperature = 15; globalParams.contrast = -5; globalParams.saturation = -15; globalParams.sepia = 35; globalParams.grain = 25; globalParams.vignette = 25; break;
+                case 'retro': globalParams.temperature = -15; globalParams.contrast = -5; globalParams.saturation = -15; globalParams.sepia = 35; globalParams.grain = 25; globalParams.vignette = 25; break;
                 case 'matte': globalParams.saturation = -15; globalParams.contrast = -10; globalParams.shadows = 35; globalParams.vibrance = -10; break;
                 case 'dramatic': globalParams.contrast = 25; globalParams.vibrance = 25; globalParams.vignette = 45; globalParams.highlights = 15; globalParams.shadows = -35; globalParams.grain = 20; break;
             }
