@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3-PhotoEditor Ver.1.5</title>
+    <title>M3-PhotoEditor Ver.2.13</title>
     <!-- M3を活かしたシンプルでカッコイイWebアイコンの設定 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='black'/><rect x='12' y='12' width='76' height='76' rx='10' fill='none' stroke='white' stroke-width='1.5' opacity='0.4'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui, sans-serif' font-weight='900' font-size='48' letter-spacing='-2'>M3</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -60,7 +60,7 @@
         @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
         .flash-overlay { animation: flash 0.5s ease-out forwards; }
         
-        /* AI Tag Styles - サイズ調整 */
+        /* AI Tag Styles */
         .ai-tag {
             border: 1px solid #404040;
             background-color: #262626;
@@ -130,6 +130,25 @@
             display: flex;
             opacity: 1;
             transform: translateX(0);
+        }
+
+        /* マイスタイルボタン */
+        .mystyle-btn {
+            @apply w-full h-8 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs flex items-center justify-between px-2 transition group relative;
+        }
+        .mystyle-delete {
+            @apply opacity-0 group-hover:opacity-100 hover:text-red-400 transition p-1;
+        }
+
+        /* オーバーレイ */
+        #local-disabled-overlay {
+            pointer-events: none;
+        }
+        #local-disabled-overlay p {
+            background: rgba(23, 23, 23, 0.9);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #404040;
         }
     </style>
 </head>
@@ -212,7 +231,7 @@
     <div class="flex flex-1 overflow-hidden relative">
         
         <!-- 左サイドバー（プリセット & AIパネル） -->
-        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-4 shrink-0 z-10 hidden sm:flex overflow-y-auto overflow-x-hidden custom-scroll transition-all duration-300" id="left-sidebar" style="width: 4rem;">
+        <aside class="w-16 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-4 gap-4 shrink-0 z-10 hidden sm:flex overflow-y-auto overflow-x-hidden custom-scroll transition-all duration-300" id="left-sidebar" style="width: 5rem;">
             
             <!-- Magic Style ボタン -->
             <button onclick="toggleAIMode()" id="btn-magic-style" class="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 text-blue-400 hover:bg-blue-900/30 hover:text-blue-300 hover:border-blue-500/50 flex items-center justify-center transition-all shadow-lg group relative mb-2 shrink-0" title="Magic Style (AI自動アレンジ)">
@@ -225,30 +244,31 @@
             <div id="sidebar-presets" class="flex-col gap-3 pb-4 flex w-full items-center sidebar-content active-content">
                 <span class="text-[10px] font-bold text-neutral-500 tracking-widest mt-1">STYLE</span>
                 
-                <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
-                    <span class="font-serif font-bold text-xs">BW</span>
-                </button>
-                <button onclick="applyPreset('warm')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ウォーム">
-                    <span class="text-orange-300 text-lg">●</span>
-                </button>
-                <button onclick="applyPreset('cool')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="クール">
-                    <span class="text-blue-300 text-lg">●</span>
-                </button>
                 <button onclick="applyPreset('film')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="フィルム調">
                     <i class="ph ph-film-strip"></i>
-                </button>
-                <button onclick="applyPreset('vivid')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ビビッド">
-                    <i class="ph ph-sparkle text-yellow-400"></i>
                 </button>
                 <button onclick="applyPreset('retro')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="レトロ">
                     <i class="ph ph-camera-rotate text-orange-400"></i>
                 </button>
-                <button onclick="applyPreset('matte')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="マット">
-                    <i class="ph ph-cloud-fog text-neutral-400"></i>
+                <button onclick="applyPreset('vivid')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ビビッド">
+                    <i class="ph ph-sparkle text-yellow-400"></i>
                 </button>
-                <button onclick="applyPreset('dramatic')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="ドラマチック">
-                    <i class="ph ph-lightning text-purple-400"></i>
+                 <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
+                    <span class="font-serif font-bold text-xs">BW</span>
                 </button>
+
+                <div class="w-8 h-px bg-neutral-800 shrink-0 my-1"></div>
+                <span class="text-[9px] font-bold text-neutral-500 tracking-widest">MY STYLE</span>
+                
+                <div id="my-style-list" class="flex flex-col gap-2 w-full px-1 items-center">
+                    <!-- マイスタイルがここに追加される -->
+                </div>
+
+                <!-- 保存ボタン (ID付与) -->
+                <button id="btn-save-style" class="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 flex items-center justify-center transition" title="現在の設定を保存">
+                    <i class="ph ph-plus"></i>
+                </button>
+
             </div>
 
             <!-- Magic Style パネル (Mode B) -->
@@ -281,13 +301,12 @@
                     <div id="ai-tags-mood" class="flex flex-wrap gap-2"></div>
                 </div>
 
-                <!-- 強度スライダー (下に移動) -->
+                <!-- 強度スライダー -->
                 <div class="bg-neutral-800/80 p-3 rounded-lg border border-neutral-700 mt-2">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-xs font-bold text-neutral-400">アレンジ強度</span>
                         <span id="ai-strength-val" class="text-xs font-mono text-purple-400">1.00x</span>
                     </div>
-                    <!-- 範囲拡大: 0.1 ~ 2.0 -->
                     <input type="range" id="ai-strength" min="0.1" max="2.0" step="0.05" value="1.0" class="w-full h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer mb-1 accent-purple-500">
                 </div>
             </div>
@@ -355,6 +374,17 @@
                     <label for="invert-mask" class="text-xs text-neutral-400 cursor-pointer select-none">選択範囲を反転 (外側に適用)</label>
                     <input type="checkbox" id="invert-mask" class="custom-checkbox" onchange="requestAnimationFrame(() => render())">
                 </div>
+                
+                <!-- モザイク (上に移動) -->
+                <div class="mb-5 group">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">モザイク</span>
+                        <input type="number" id="num-localMosaic" value="0" min="0" max="100">
+                    </div>
+                    <input type="range" id="localMosaic" min="0" max="100" value="0" step="1" class="control-slider">
+                </div>
+
+                <!-- ぼかし -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
                         <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">ぼかし</span>
@@ -362,12 +392,14 @@
                     </div>
                     <input type="range" id="localBlur" min="0" max="50" value="0" step="1" class="control-slider">
                 </div>
+                
+                <!-- 境界のぼかし (モザイク/ぼかしの下、Max 200, ID: localFeather) -->
                 <div class="mb-5 group">
                     <div class="flex justify-between items-center text-xs mb-2">
-                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">モザイク</span>
-                        <input type="number" id="num-localMosaic" value="0" min="0" max="100">
+                        <span class="text-neutral-400 group-hover:text-neutral-200 transition param-label" title="ダブルクリックでリセット">境界のぼかし (Feather)</span>
+                        <input type="number" id="num-localFeather" value="0" min="0" max="200" step="1">
                     </div>
-                    <input type="range" id="localMosaic" min="0" max="100" value="0" step="1" class="control-slider">
+                    <input type="range" id="localFeather" min="0" max="200" value="0" step="1" class="control-slider">
                 </div>
             </div>
 
@@ -477,7 +509,7 @@
 
             <!-- フッター -->
             <div class="mt-auto p-6 text-center shrink-0">
-                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.1.5</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.2.13</p>
                 <p class="text-[10px] text-neutral-600 mt-1 tracking-wider">created by Hayao</p>
             </div>
         </aside>
@@ -554,6 +586,8 @@
         const aiStrengthSlider = document.getElementById('ai-strength');
         const aiStrengthVal = document.getElementById('ai-strength-val');
         const btnMagicStyle = document.getElementById('btn-magic-style');
+        const myStyleList = document.getElementById('my-style-list');
+        const btnSaveStyle = document.getElementById('btn-save-style');
 
         const history = new HistoryManager();
         let isImageLoaded = false;
@@ -563,6 +597,9 @@
         let baseImage = null; 
         let initialCleanImage = null; 
         
+        // メモリ内スタイル保存（LocalStorage使えない場合のフォールバック）
+        let memoryStyles = [];
+        
         let viewState = { scale: 1, x: 0, y: 0, isDragging: false, lastX: 0, lastY: 0 };
         let selectionState = { active: false, dragMode: null, startX: 0, startY: 0, initialRect: null, initialRotation: 0, anchorGlobal: null, shape: 'rect', rotation: 0, rect: { x: 0, y: 0, w: 0, h: 0 } };
 
@@ -570,7 +607,7 @@
             brightness: 0, contrast: 0, saturation: 0, vibrance: 0, temperature: 0, 
             hue: 0, sepia: 0, invert: 0, blur: 0, grain: 0, vignette: 0, highlights: 0, shadows: 0 
         };
-        const localParams = { blur: 0, mosaic: 0 };
+        const localParams = { blur: 0, mosaic: 0, feather: 0 }; 
 
         function updateCanvasTransform() {
             canvas.style.transform = `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.scale})`;
@@ -649,11 +686,25 @@
                     canvas.width = baseImage.width; canvas.height = baseImage.height;
                     isImageLoaded = true; placeholderMsg.style.display = 'none'; canvas.classList.remove('hidden'); downloadBtn.disabled = false;
                     compareBtn.classList.remove('hidden'); 
+                    
                     history.reset(); 
+                    resetParams(globalParams); 
+                    resetParams(localParams);
+                    selectedTags = []; 
+                    cancelAction();
+                    setMode('hand');
+                    
+                    if (!document.getElementById('ai-panel').classList.contains('hidden-content')) {
+                        closeAIModal(false);
+                    }
+
                     saveHistoryState();
-                    resetView(); setMode('hand'); resetParams(globalParams); resetParams(localParams);
+                    resetView(); 
+                    updateInputDisplays(globalParams, ''); 
+                    updateInputDisplays(localParams, 'local');
                     loadingOverlay.classList.add('hidden'); loadingOverlay.classList.remove('flex');
                     render();
+                    loadMyStyles();
                 };
                 img.src = e.target.result;
             };
@@ -711,9 +762,37 @@
             const rot = selectionState.rotation; const cx = rect.x + rect.w / 2; const cy = rect.y + rect.h / 2;
 
             if (params.mosaic > 0 || params.blur > 0) {
-                tmpCtx.drawImage(baseImage, 0, 0);
-                const effectCanvas = document.createElement('canvas'); effectCanvas.width = w; effectCanvas.height = h;
-                const effectCtx = effectCanvas.getContext('2d'); effectCtx.drawImage(baseImage, 0, 0);
+                // マスクを作成
+                const maskCanvas = document.createElement('canvas');
+                maskCanvas.width = w;
+                maskCanvas.height = h;
+                const maskCtx = maskCanvas.getContext('2d');
+
+                maskCtx.save();
+                maskCtx.translate(cx, cy);
+                maskCtx.rotate(rot);
+                maskCtx.translate(-cx, -cy);
+                maskCtx.beginPath();
+                if (selectionState.shape === 'circle') {
+                     maskCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
+                } else {
+                     maskCtx.rect(rect.x, rect.y, rect.w, rect.h);
+                }
+                maskCtx.fillStyle = 'white';
+                // フェザー適用
+                if (params.feather > 0) {
+                    maskCtx.filter = `blur(${params.feather}px)`;
+                }
+                maskCtx.fill();
+                maskCtx.restore();
+
+                // エフェクト画像作成
+                const effectCanvas = document.createElement('canvas');
+                effectCanvas.width = w;
+                effectCanvas.height = h;
+                const effectCtx = effectCanvas.getContext('2d');
+                effectCtx.drawImage(baseImage, 0, 0);
+
                 if (params.blur > 0) {
                     const bC = document.createElement('canvas'); bC.width = w; bC.height = h;
                     const bCtx = bC.getContext('2d'); bCtx.filter = `blur(${params.blur}px)`;
@@ -725,23 +804,33 @@
                     const offCtx = offC.getContext('2d'); offCtx.drawImage(effectCanvas, 0, 0, offC.width, offC.height);
                     effectCtx.imageSmoothingEnabled = false; effectCtx.drawImage(offC, 0, 0, offC.width, offC.height, 0, 0, w, h); effectCtx.imageSmoothingEnabled = true;
                 }
-                tmpCtx.save(); tmpCtx.translate(cx, cy); tmpCtx.rotate(rot); tmpCtx.translate(-cx, -cy);
-                tmpCtx.beginPath();
-                if (selectionState.shape === 'circle') tmpCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
-                else tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
+
+                // 合成 (背景: エフェクト画像 or 元画像)
                 if (invertCheckbox.checked) {
-                    tmpCtx.setTransform(1,0,0,1,0,0); tmpCtx.clearRect(0,0,w,h); tmpCtx.drawImage(effectCanvas, 0, 0);
-                    tmpCtx.save(); tmpCtx.translate(cx,cy); tmpCtx.rotate(rot); tmpCtx.translate(-cx,-cy);
-                    tmpCtx.beginPath();
-                    if (selectionState.shape === 'circle') tmpCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
-                    else tmpCtx.rect(rect.x, rect.y, rect.w, rect.h);
-                    tmpCtx.clip(); tmpCtx.translate(cx, cy); tmpCtx.rotate(-rot); tmpCtx.translate(-cx, -cy);
-                    tmpCtx.drawImage(baseImage, 0, 0); tmpCtx.restore();
+                    // 反転: 背景=エフェクト、選択範囲=元
+                    tmpCtx.drawImage(effectCanvas, 0, 0);
+                    
+                    // マスクで元画像を切り抜いて重ねる (destination-in でマスク部分だけ残す)
+                    const maskedOriginal = document.createElement('canvas'); maskedOriginal.width = w; maskedOriginal.height = h;
+                    const moCtx = maskedOriginal.getContext('2d');
+                    moCtx.drawImage(baseImage, 0, 0);
+                    moCtx.globalCompositeOperation = 'destination-in';
+                    moCtx.drawImage(maskCanvas, 0, 0);
+                    
+                    tmpCtx.drawImage(maskedOriginal, 0, 0);
+
                 } else {
-                    tmpCtx.clip(); tmpCtx.translate(cx, cy); tmpCtx.rotate(-rot); tmpCtx.translate(-cx, -cy);
-                    tmpCtx.drawImage(effectCanvas, 0, 0); tmpCtx.restore();
+                    // 通常: 背景=元、選択範囲=エフェクト
+                    tmpCtx.drawImage(baseImage, 0, 0);
+                    
+                    const maskedEffect = document.createElement('canvas'); maskedEffect.width = w; maskedEffect.height = h;
+                    const meCtx = maskedEffect.getContext('2d');
+                    meCtx.drawImage(effectCanvas, 0, 0);
+                    meCtx.globalCompositeOperation = 'destination-in';
+                    meCtx.drawImage(maskCanvas, 0, 0);
+
+                    tmpCtx.drawImage(maskedEffect, 0, 0);
                 }
-                tmpCtx.restore();
             }
             baseImage = await createImageBitmap(tmpCanvas);
             await saveHistoryState(); cancelAction();
@@ -774,7 +863,6 @@
 
             for (let i = 0; i < len; i += 4) {
                 let r = data[i], g = data[i+1], b = data[i+2];
-                // 色温度反転 (赤<->青)
                 if (temperature !== 0) { r -= temperature * 1.5; b += temperature * 1.5; }
                 if (highlights !== 0 || shadows !== 0) {
                     let nR = r / 255, nG = g / 255, nB = b / 255;
@@ -844,9 +932,22 @@
                     const originalCanvas = document.createElement('canvas'); originalCanvas.width = w; originalCanvas.height = h;
                     const originalCtx = originalCanvas.getContext('2d'); originalCtx.drawImage(canvas, 0, 0);
 
+                    // マスク (プレビュー)
+                    const maskCanvas = document.createElement('canvas'); maskCanvas.width = w; maskCanvas.height = h;
+                    const maskCtx = maskCanvas.getContext('2d');
+                    maskCtx.save();
+                    maskCtx.translate(cx, cy); maskCtx.rotate(rot); maskCtx.translate(-cx, -cy);
+                    maskCtx.beginPath();
+                    if (selectionState.shape === 'circle') maskCtx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
+                    else maskCtx.rect(rect.x, rect.y, rect.w, rect.h);
+                    maskCtx.fillStyle = 'white';
+                    if (lp.feather > 0) maskCtx.filter = `blur(${lp.feather}px)`;
+                    maskCtx.fill();
+                    maskCtx.restore();
+
+                    // エフェクト
                     const eC = document.createElement('canvas'); eC.width = w; eC.height = h;
                     const eCtx = eC.getContext('2d'); eCtx.drawImage(originalCanvas, 0, 0); 
-
                     if (lp.blur > 0) {
                         const bC = document.createElement('canvas'); bC.width = w; bC.height = h;
                         const bCtx = bC.getContext('2d'); bCtx.filter = `blur(${lp.blur}px)`; bCtx.drawImage(eC,0,0); eCtx.clearRect(0,0,w,h); eCtx.drawImage(bC,0,0);
@@ -856,19 +957,27 @@
                         const offCtx = offC.getContext('2d'); offCtx.drawImage(eCtx.canvas,0,0,offC.width,offC.height); eCtx.imageSmoothingEnabled=false; eCtx.drawImage(offC,0,0,offC.width,offC.height,0,0,w,h); eCtx.imageSmoothingEnabled=true;
                     }
 
+                    // 合成
                     ctx.save();
+                    const maskedEffect = document.createElement('canvas'); maskedEffect.width = w; maskedEffect.height = h;
+                    const meCtx = maskedEffect.getContext('2d');
+                    
                     if (invertCheckbox.checked) {
-                        ctx.drawImage(eC, 0, 0); 
-                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy); ctx.beginPath();
-                        if (selectionState.shape === 'circle') ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
-                        else ctx.rect(rect.x, rect.y, rect.w, rect.h);
-                        ctx.clip(); ctx.translate(cx, cy); ctx.rotate(-rot); ctx.translate(-cx, -cy); ctx.drawImage(originalCanvas, 0, 0); ctx.restore();
+                         const iMask = document.createElement('canvas'); iMask.width = w; iMask.height = h;
+                         const iCtx = iMask.getContext('2d');
+                         iCtx.fillStyle = 'white'; iCtx.fillRect(0,0,w,h);
+                         iCtx.globalCompositeOperation = 'destination-out';
+                         iCtx.drawImage(maskCanvas, 0, 0);
+
+                         meCtx.drawImage(eC, 0, 0);
+                         meCtx.globalCompositeOperation = 'destination-in';
+                         meCtx.drawImage(iMask, 0, 0);
                     } else {
-                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy); ctx.beginPath();
-                        if (selectionState.shape === 'circle') ctx.ellipse(cx, cy, Math.abs(rect.w/2), Math.abs(rect.h/2), 0, 0, 2*Math.PI);
-                        else ctx.rect(rect.x, rect.y, rect.w, rect.h);
-                        ctx.clip(); ctx.translate(cx, cy); ctx.rotate(-rot); ctx.translate(-cx, -cy); ctx.drawImage(eC, 0, 0); ctx.restore();
+                         meCtx.drawImage(eC, 0, 0);
+                         meCtx.globalCompositeOperation = 'destination-in';
+                         meCtx.drawImage(maskCanvas, 0, 0);
                     }
+                    ctx.drawImage(maskedEffect, 0, 0);
                     ctx.restore();
                 }
             }
@@ -936,28 +1045,28 @@
             return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
         }
 
-        // ズーム処理の修正
-        dropZone.addEventListener('wheel', (e) => {
+        // --- Window Event Listeners for Zoom ---
+        // dropZoneだけでなくwindow全体でホイールを監視し、ターゲットがキャンバスエリア内ならズーム
+        window.addEventListener('wheel', (e) => {
             if (!isImageLoaded) return;
-            e.preventDefault();
-            
-            // より滑らかで安全なズーム計算
-            const delta = Math.sign(e.deltaY);
-            const zoomFactor = 0.1;
+            // ターゲットがdropZoneまたはその子要素の場合のみズーム
+            if (dropZone.contains(e.target)) {
+                e.preventDefault();
+                const delta = -Math.sign(e.deltaY);
+                const zoomStep = 0.1;
+                let newScale = viewState.scale;
 
-            if (delta < 0) {
-                // 上回転（拡大）
-                viewState.scale *= (1 + zoomFactor);
-            } else {
-                // 下回転（縮小）
-                viewState.scale *= (1 - zoomFactor);
+                if (delta > 0) {
+                    newScale *= (1 + zoomStep);
+                } else {
+                    newScale /= (1 + zoomStep);
+                }
+                
+                viewState.scale = Math.min(Math.max(newScale, 0.05), 50);
+                updateCanvasTransform();
             }
-
-            // 制限範囲 (0.05倍 ～ 50倍)
-            viewState.scale = Math.min(Math.max(viewState.scale, 0.05), 50);
-            
-            updateCanvasTransform();
         }, { passive: false });
+
 
         dropZone.addEventListener('dragover', (e) => e.preventDefault());
         dropZone.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]); });
@@ -998,14 +1107,42 @@
                 selectionState.rect = { x: w > 0 ? selectionState.startX : selectionState.startX + w, y: h > 0 ? selectionState.startY : selectionState.startY + h, w: Math.abs(w), h: Math.abs(h) };
                 selectionState.active = true;
             } else if (selectionState.dragMode.startsWith('resize')) {
-                const type = selectionState.dragMode.split('-')[1], anchor = selectionState.anchorGlobal, rot = selectionState.rotation;
-                const lp = rotatePoint(mx, my, anchor.x, anchor.y, -rot);
-                let nw = lp.x, nh = lp.y; if (type === 'tl' || type === 'bl') nw = -lp.x; if (type === 'tl' || type === 'tr') nh = -lp.y;
-                const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? initialCleanImage.width / initialCleanImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
-                if (ratio) nh = nw / ratio; else if (e.shiftKey) { const s = Math.max(Math.abs(nw), Math.abs(nh)); nw = s; nh = s; }
-                let lcx = nw / 2, lcy = nh / 2; if (type === 'tl' || type === 'bl') lcx = -nw / 2; if (type === 'tl' || type === 'tr') lcy = -nh / 2;
-                const newCenter = rotatePoint(anchor.x + lcx, anchor.y + lcy, anchor.x, anchor.y, rot);
-                selectionState.rect = { x: newCenter.x - Math.abs(nw)/2, y: newCenter.y - Math.abs(nh)/2, w: Math.abs(nw), h: Math.abs(nh) };
+                const type = selectionState.dragMode.split('-')[1];
+                const rect = selectionState.rect;
+                const cx = rect.x + rect.w/2;
+                const cy = rect.y + rect.h/2;
+                const localM = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
+                
+                let localLeft = -rect.w/2;
+                let localRight = rect.w/2;
+                let localTop = -rect.h/2;
+                let localBottom = rect.h/2;
+                
+                const lmx = localM.x - cx;
+                const lmy = localM.y - cy;
+                
+                if (type.includes('l')) localLeft = lmx;
+                if (type.includes('r')) localRight = lmx;
+                if (type.includes('t')) localTop = lmy;
+                if (type.includes('b')) localBottom = lmy;
+                
+                let newW = localRight - localLeft;
+                let newH = localBottom - localTop;
+                
+                if (newW < 0) { newW = -newW; const tmp = localLeft; localLeft = localRight; localRight = tmp; }
+                if (newH < 0) { newH = -newH; const tmp = localTop; localTop = localBottom; localBottom = tmp; }
+                
+                const newLocalCx = (localLeft + localRight) / 2;
+                const newLocalCy = (localTop + localBottom) / 2;
+                
+                const globalCenterOffset = rotatePoint(cx + newLocalCx, cy + newLocalCy, cx, cy, selectionState.rotation);
+                
+                selectionState.rect = {
+                    x: globalCenterOffset.x - newW/2,
+                    y: globalCenterOffset.y - newH/2,
+                    w: newW,
+                    h: newH
+                };
             }
             render();
         });
@@ -1013,17 +1150,23 @@
         window.addEventListener('mouseup', () => {
             if (viewState.isDragging) { viewState.isDragging = false; canvas.style.cursor = currentMode === 'hand' ? 'grab' : 'crosshair'; }
             if (selectionState.dragMode) {
+                const mode = selectionState.dragMode;
                 selectionState.dragMode = null;
                 if (selectionState.rect.w > 5 && selectionState.rect.h > 5) {
                     selectionState.active = true; actionBar.classList.remove('hidden');
                     if (currentMode === 'crop') { actionLabel.textContent = 'トリミング範囲'; localPanelOverlay.classList.remove('opacity-0', 'pointer-events-none'); }
-                    else { actionLabel.textContent = '選択範囲'; localPanelOverlay.classList.add('opacity-0', 'pointer-events-none'); resetParams(localParams); }
+                    else { 
+                        actionLabel.textContent = '選択範囲'; 
+                        localPanelOverlay.classList.add('opacity-0', 'pointer-events-none'); 
+                        // 新規作成時のみリセット
+                        if (mode === 'create') resetParams(localParams);
+                    }
                 } else selectionState.active = false;
                 render();
             }
         });
 
-        // AI Modal - Magic Style Logic (Ver.2.6 - New Integration)
+        // AI Modal - Magic Style Logic (Ver.2.14)
         const AI_TAGS = [
             { id: 'bright', label: '明るく', category: 'light', group: 'brightness', params: { brightness: 15, highlights: 10 } },
             { id: 'dark', label: '暗く', category: 'light', group: 'brightness', params: { brightness: -15, shadows: -10, contrast: 5 } },
@@ -1052,17 +1195,15 @@
         let selectedTags = [];
         let aiParamsBackup = null;
 
-        function toggleAIMode() {
+        window.toggleAIMode = function() {
             if (!isImageLoaded) return;
             const sidebarPresets = document.getElementById('sidebar-presets');
             const aiPanel = document.getElementById('ai-panel');
             const leftSidebar = document.getElementById('left-sidebar');
             const btnMagic = document.getElementById('btn-magic-style');
             
-            // Toggle Logic
             if (aiPanel.classList.contains('hidden-content')) {
-                // Open AI Panel
-                aiParamsBackup = JSON.parse(JSON.stringify(globalParams)); // Backup
+                aiParamsBackup = JSON.parse(JSON.stringify(globalParams));
                 sidebarPresets.classList.remove('active-content');
                 sidebarPresets.classList.add('hidden-content');
                 
@@ -1076,22 +1217,21 @@
                 }, 200);
 
                 btnMagic.classList.add('border-blue-500', 'bg-blue-900/30', 'text-blue-300');
-                leftSidebar.style.width = '18rem'; // Expand sidebar width for AI panel
+                leftSidebar.style.width = '18rem'; 
                 renderAITags();
             } else {
-                // Close AI Panel (Apply)
                 closeAIModal(true);
             }
-        }
+        };
 
-        function closeAIModal(apply = true) { // Default apply is true now (auto-apply)
+        function closeAIModal(apply = true) {
             const sidebarPresets = document.getElementById('sidebar-presets');
             const aiPanel = document.getElementById('ai-panel');
             const leftSidebar = document.getElementById('left-sidebar');
             const btnMagic = document.getElementById('btn-magic-style');
 
             if (apply) {
-                saveHistoryState(); // Save applied state
+                saveHistoryState();
             }
 
             aiPanel.classList.remove('active-content');
@@ -1107,9 +1247,7 @@
             }, 200);
 
             btnMagic.classList.remove('border-blue-500', 'bg-blue-900/30', 'text-blue-300');
-            leftSidebar.style.width = '4rem'; // Restore sidebar width
-            
-            // selectedTags = []; // Keep selection state? Or Reset? Let's keep for re-editing.
+            leftSidebar.style.width = '5rem';
             aiParamsBackup = null;
         }
 
@@ -1152,20 +1290,19 @@
             updateAIPreview();
         }
 
-        function resetCategory(cat) {
-             // Filter out tags belonging to this category
+        window.resetCategory = function(cat) {
             selectedTags = selectedTags.filter(tagId => {
                 const tag = AI_TAGS.find(t => t.id === tagId);
                 return tag.category !== cat;
             });
             renderAITags();
             updateAIPreview();
-        }
+        };
 
         function updateAIPreview() {
             if (!aiParamsBackup) return;
             const strength = parseFloat(document.getElementById('ai-strength').value);
-            Object.assign(globalParams, aiParamsBackup); // Reset to base state
+            Object.assign(globalParams, aiParamsBackup); 
             
             selectedTags.forEach(tagId => {
                 const tag = AI_TAGS.find(t => t.id === tagId);
@@ -1182,9 +1319,9 @@
             render();
         }
 
-        function applyAI() {
+        window.applyAI = function() {
             closeAIModal(true);
-        }
+        };
 
         const handleCompareOn = (e) => { if(!isImageLoaded) return; e.preventDefault(); render(false, true); };
         const handleCompareOff = (e) => { if(!isImageLoaded) return; render(false, false); };
@@ -1209,7 +1346,6 @@
             resetParams(globalParams);
             switch(type) {
                 case 'bw': globalParams.saturation = -100; globalParams.contrast = 15; globalParams.grain = 20; globalParams.vignette = 20; break;
-                // プリセット値も色温度反転に対応
                 case 'warm': globalParams.temperature = -25; globalParams.vibrance = 15; globalParams.sepia = 10; break;
                 case 'cool': globalParams.temperature = 25; globalParams.contrast = 10; globalParams.vibrance = 15; globalParams.hue = -5; break;
                 case 'film': globalParams.contrast = -10; globalParams.brightness = 5; globalParams.saturation = -10; globalParams.vibrance = -10; globalParams.temperature = -10; globalParams.grain = 35; globalParams.vignette = 30; globalParams.blur = 0.5; break;
@@ -1220,6 +1356,101 @@
             }
             saveHistoryState(); updateInputDisplays(globalParams, ''); render();
         };
+
+        // --- My Style Functions ---
+        const MY_STYLE_KEY = 'm3-photo-editor-styles';
+
+        function loadMyStyles() {
+            const list = document.getElementById('my-style-list');
+            list.innerHTML = '';
+            try {
+                // ローカルストレージが無効な場合のフォールバック（メモリ内）
+                let styles;
+                try {
+                    styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
+                } catch(e) {
+                    styles = memoryStyles;
+                }
+                
+                styles.forEach(style => {
+                    const btn = document.createElement('div');
+                    btn.className = 'mystyle-btn';
+                    btn.innerHTML = `
+                        <span class="truncate cursor-pointer flex-1 py-2" onclick="applyMyStyle('${style.id}')">${style.name}</span>
+                        <button class="mystyle-delete" onclick="deleteMyStyle('${style.id}')" title="削除">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    `;
+                    list.appendChild(btn);
+                });
+            } catch (e) {
+                console.warn('Style load error', e);
+            }
+        }
+
+        // 保存ボタンイベントリスナー (ID指定)
+        window.saveMyStyle = function() {
+            if (!isImageLoaded) { alert('画像を読み込んでください'); return; }
+            const name = prompt('現在の設定を保存します。\nスタイル名を入力してください:');
+            if (!name) return;
+
+            const newStyle = {
+                id: Date.now().toString(),
+                name: name,
+                params: { ...globalParams }
+            };
+
+            try {
+                // LocalStorage試行
+                const styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
+                styles.push(newStyle);
+                localStorage.setItem(MY_STYLE_KEY, JSON.stringify(styles));
+            } catch (e) {
+                // 失敗したらメモリに保存
+                console.warn('LocalStorage unavailable, using memory.', e);
+                memoryStyles.push(newStyle);
+                alert('ブラウザの制限により保存できませんでした。\n一時的にメモリに保存します（リロードすると消えます）。');
+            }
+            loadMyStyles();
+        };
+
+        window.applyMyStyle = (id) => { 
+            if (!isImageLoaded) return;
+            try {
+                let styles;
+                try {
+                    styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
+                } catch(e) {
+                    styles = memoryStyles;
+                }
+
+                const style = styles.find(s => s.id === id);
+                if (style) {
+                    resetParams(globalParams); 
+                    Object.assign(globalParams, style.params);
+                    saveHistoryState();
+                    updateInputDisplays(globalParams, '');
+                    render();
+                }
+            } catch(e) {}
+        };
+
+        window.deleteMyStyle = (id) => { 
+            if (!confirm('このスタイルを削除しますか？')) return;
+            try {
+                try {
+                    let styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
+                    styles = styles.filter(s => s.id !== id);
+                    localStorage.setItem(MY_STYLE_KEY, JSON.stringify(styles));
+                } catch(e) {
+                    memoryStyles = memoryStyles.filter(s => s.id !== id);
+                }
+                loadMyStyles();
+            } catch(e) {}
+        };
+
+        // Initialize My Styles on load
+        loadMyStyles();
 
         updateInputDisplays(globalParams, ''); updateInputDisplays(localParams, 'local');
     </script>
