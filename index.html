@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3-PhotoEditor Ver.2.13</title>
+    <title>M3-PhotoEditor Ver.1.6</title>
     <!-- M3を活かしたシンプルでカッコイイWebアイコンの設定 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='black'/><rect x='12' y='12' width='76' height='76' rx='10' fill='none' stroke='white' stroke-width='1.5' opacity='0.4'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui, sans-serif' font-weight='900' font-size='48' letter-spacing='-2'>M3</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -132,14 +132,6 @@
             transform: translateX(0);
         }
 
-        /* マイスタイルボタン */
-        .mystyle-btn {
-            @apply w-full h-8 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs flex items-center justify-between px-2 transition group relative;
-        }
-        .mystyle-delete {
-            @apply opacity-0 group-hover:opacity-100 hover:text-red-400 transition p-1;
-        }
-
         /* オーバーレイ */
         #local-disabled-overlay {
             pointer-events: none;
@@ -256,19 +248,6 @@
                  <button onclick="applyPreset('bw')" class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition group relative" title="モノクロ">
                     <span class="font-serif font-bold text-xs">BW</span>
                 </button>
-
-                <div class="w-8 h-px bg-neutral-800 shrink-0 my-1"></div>
-                <span class="text-[9px] font-bold text-neutral-500 tracking-widest">MY STYLE</span>
-                
-                <div id="my-style-list" class="flex flex-col gap-2 w-full px-1 items-center">
-                    <!-- マイスタイルがここに追加される -->
-                </div>
-
-                <!-- 保存ボタン (ID付与) -->
-                <button id="btn-save-style" class="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 flex items-center justify-center transition" title="現在の設定を保存">
-                    <i class="ph ph-plus"></i>
-                </button>
-
             </div>
 
             <!-- Magic Style パネル (Mode B) -->
@@ -509,7 +488,7 @@
 
             <!-- フッター -->
             <div class="mt-auto p-6 text-center shrink-0">
-                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.2.13</p>
+                <p class="text-[10px] text-neutral-500 font-medium">M3-PhotoEditor Ver.1.6</p>
                 <p class="text-[10px] text-neutral-600 mt-1 tracking-wider">created by Hayao</p>
             </div>
         </aside>
@@ -586,8 +565,6 @@
         const aiStrengthSlider = document.getElementById('ai-strength');
         const aiStrengthVal = document.getElementById('ai-strength-val');
         const btnMagicStyle = document.getElementById('btn-magic-style');
-        const myStyleList = document.getElementById('my-style-list');
-        const btnSaveStyle = document.getElementById('btn-save-style');
 
         const history = new HistoryManager();
         let isImageLoaded = false;
@@ -596,9 +573,6 @@
         
         let baseImage = null; 
         let initialCleanImage = null; 
-        
-        // メモリ内スタイル保存（LocalStorage使えない場合のフォールバック）
-        let memoryStyles = [];
         
         let viewState = { scale: 1, x: 0, y: 0, isDragging: false, lastX: 0, lastY: 0 };
         let selectionState = { active: false, dragMode: null, startX: 0, startY: 0, initialRect: null, initialRotation: 0, anchorGlobal: null, shape: 'rect', rotation: 0, rect: { x: 0, y: 0, w: 0, h: 0 } };
@@ -687,6 +661,7 @@
                     isImageLoaded = true; placeholderMsg.style.display = 'none'; canvas.classList.remove('hidden'); downloadBtn.disabled = false;
                     compareBtn.classList.remove('hidden'); 
                     
+                    // Reset Everything
                     history.reset(); 
                     resetParams(globalParams); 
                     resetParams(localParams);
@@ -704,7 +679,6 @@
                     updateInputDisplays(localParams, 'local');
                     loadingOverlay.classList.add('hidden'); loadingOverlay.classList.remove('flex');
                     render();
-                    loadMyStyles();
                 };
                 img.src = e.target.result;
             };
@@ -1046,7 +1020,6 @@
         }
 
         // --- Window Event Listeners for Zoom ---
-        // dropZoneだけでなくwindow全体でホイールを監視し、ターゲットがキャンバスエリア内ならズーム
         window.addEventListener('wheel', (e) => {
             if (!isImageLoaded) return;
             // ターゲットがdropZoneまたはその子要素の場合のみズーム
@@ -1097,9 +1070,19 @@
             if (hnd) canvas.style.cursor = hnd === 'rotate' ? 'alias' : (hnd === 'tl' || hnd === 'br' ? 'nwse-resize' : 'nesw-resize');
             else if (isInsideRect(mx, my)) canvas.style.cursor = 'move';
             else canvas.style.cursor = 'crosshair';
+            
             if (!selectionState.dragMode) return;
-            if (selectionState.dragMode === 'rotate') { const r = selectionState.rect, cx = r.x+r.w/2, cy = r.y+r.h/2; selectionState.rotation = Math.atan2(my - cy, mx - cx) + Math.PI / 2; render(); return; }
-            if (selectionState.dragMode === 'move') { selectionState.rect.x = selectionState.initialRect.x + (mx - selectionState.startX); selectionState.rect.y = selectionState.initialRect.y + (my - selectionState.startY); } 
+
+            if (selectionState.dragMode === 'rotate') { 
+                const r = selectionState.rect, cx = r.x+r.w/2, cy = r.y+r.h/2; 
+                selectionState.rotation = Math.atan2(my - cy, mx - cx) + Math.PI / 2; 
+                render(); 
+                return; 
+            }
+            if (selectionState.dragMode === 'move') { 
+                selectionState.rect.x = selectionState.initialRect.x + (mx - selectionState.startX); 
+                selectionState.rect.y = selectionState.initialRect.y + (my - selectionState.startY); 
+            } 
             else if (selectionState.dragMode === 'create') {
                 let w = mx - selectionState.startX, h = my - selectionState.startY;
                 const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? initialCleanImage.width / initialCleanImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
@@ -1107,41 +1090,38 @@
                 selectionState.rect = { x: w > 0 ? selectionState.startX : selectionState.startX + w, y: h > 0 ? selectionState.startY : selectionState.startY + h, w: Math.abs(w), h: Math.abs(h) };
                 selectionState.active = true;
             } else if (selectionState.dragMode.startsWith('resize')) {
-                const type = selectionState.dragMode.split('-')[1];
-                const rect = selectionState.rect;
-                const cx = rect.x + rect.w/2;
-                const cy = rect.y + rect.h/2;
-                const localM = rotatePoint(mx, my, cx, cy, -selectionState.rotation);
+                const anchor = selectionState.anchorGlobal;
+                const rot = selectionState.rotation;
                 
-                let localLeft = -rect.w/2;
-                let localRight = rect.w/2;
-                let localTop = -rect.h/2;
-                let localBottom = rect.h/2;
+                const unrotatedMouse = rotatePoint(mx, my, anchor.x, anchor.y, -rot);
                 
-                const lmx = localM.x - cx;
-                const lmy = localM.y - cy;
+                let dx = unrotatedMouse.x - anchor.x;
+                let dy = unrotatedMouse.y - anchor.y;
+
+                const ratio = (currentMode === 'crop') ? (aspectRatioSelect.value === 'free' ? null : (aspectRatioSelect.value === 'original' ? initialCleanImage.width / initialCleanImage.height : parseFloat(aspectRatioSelect.value.split(':')[0]) / parseFloat(aspectRatioSelect.value.split(':')[1]))) : null;
+                if (ratio) { 
+                    if (Math.abs(dx) / ratio > Math.abs(dy)) {
+                        dy = (dy >= 0 ? 1 : -1) * (Math.abs(dx) / ratio);
+                    } else {
+                        dx = (dx >= 0 ? 1 : -1) * (Math.abs(dy) * ratio);
+                    }
+                } 
+                else if (e.shiftKey) { 
+                    const s = Math.max(Math.abs(dx), Math.abs(dy)); 
+                    dx = (dx >= 0 ? 1 : -1) * s; 
+                    dy = (dy >= 0 ? 1 : -1) * s; 
+                }
+
+                const localCx = anchor.x + dx / 2;
+                const localCy = anchor.y + dy / 2;
+
+                const newCenter = rotatePoint(localCx, localCy, anchor.x, anchor.y, rot);
                 
-                if (type.includes('l')) localLeft = lmx;
-                if (type.includes('r')) localRight = lmx;
-                if (type.includes('t')) localTop = lmy;
-                if (type.includes('b')) localBottom = lmy;
-                
-                let newW = localRight - localLeft;
-                let newH = localBottom - localTop;
-                
-                if (newW < 0) { newW = -newW; const tmp = localLeft; localLeft = localRight; localRight = tmp; }
-                if (newH < 0) { newH = -newH; const tmp = localTop; localTop = localBottom; localBottom = tmp; }
-                
-                const newLocalCx = (localLeft + localRight) / 2;
-                const newLocalCy = (localTop + localBottom) / 2;
-                
-                const globalCenterOffset = rotatePoint(cx + newLocalCx, cy + newLocalCy, cx, cy, selectionState.rotation);
-                
-                selectionState.rect = {
-                    x: globalCenterOffset.x - newW/2,
-                    y: globalCenterOffset.y - newH/2,
-                    w: newW,
-                    h: newH
+                selectionState.rect = { 
+                    x: newCenter.x - Math.abs(dx)/2, 
+                    y: newCenter.y - Math.abs(dy)/2, 
+                    w: Math.abs(dx), 
+                    h: Math.abs(dy) 
                 };
             }
             render();
@@ -1158,7 +1138,6 @@
                     else { 
                         actionLabel.textContent = '選択範囲'; 
                         localPanelOverlay.classList.add('opacity-0', 'pointer-events-none'); 
-                        // 新規作成時のみリセット
                         if (mode === 'create') resetParams(localParams);
                     }
                 } else selectionState.active = false;
@@ -1166,7 +1145,7 @@
             }
         });
 
-        // AI Modal - Magic Style Logic (Ver.2.14)
+        // AI Modal - Magic Style Logic
         const AI_TAGS = [
             { id: 'bright', label: '明るく', category: 'light', group: 'brightness', params: { brightness: 15, highlights: 10 } },
             { id: 'dark', label: '暗く', category: 'light', group: 'brightness', params: { brightness: -15, shadows: -10, contrast: 5 } },
@@ -1319,10 +1298,6 @@
             render();
         }
 
-        window.applyAI = function() {
-            closeAIModal(true);
-        };
-
         const handleCompareOn = (e) => { if(!isImageLoaded) return; e.preventDefault(); render(false, true); };
         const handleCompareOff = (e) => { if(!isImageLoaded) return; render(false, false); };
         compareBtn.addEventListener('mousedown', handleCompareOn);
@@ -1356,101 +1331,6 @@
             }
             saveHistoryState(); updateInputDisplays(globalParams, ''); render();
         };
-
-        // --- My Style Functions ---
-        const MY_STYLE_KEY = 'm3-photo-editor-styles';
-
-        function loadMyStyles() {
-            const list = document.getElementById('my-style-list');
-            list.innerHTML = '';
-            try {
-                // ローカルストレージが無効な場合のフォールバック（メモリ内）
-                let styles;
-                try {
-                    styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
-                } catch(e) {
-                    styles = memoryStyles;
-                }
-                
-                styles.forEach(style => {
-                    const btn = document.createElement('div');
-                    btn.className = 'mystyle-btn';
-                    btn.innerHTML = `
-                        <span class="truncate cursor-pointer flex-1 py-2" onclick="applyMyStyle('${style.id}')">${style.name}</span>
-                        <button class="mystyle-delete" onclick="deleteMyStyle('${style.id}')" title="削除">
-                            <i class="ph ph-trash"></i>
-                        </button>
-                    `;
-                    list.appendChild(btn);
-                });
-            } catch (e) {
-                console.warn('Style load error', e);
-            }
-        }
-
-        // 保存ボタンイベントリスナー (ID指定)
-        window.saveMyStyle = function() {
-            if (!isImageLoaded) { alert('画像を読み込んでください'); return; }
-            const name = prompt('現在の設定を保存します。\nスタイル名を入力してください:');
-            if (!name) return;
-
-            const newStyle = {
-                id: Date.now().toString(),
-                name: name,
-                params: { ...globalParams }
-            };
-
-            try {
-                // LocalStorage試行
-                const styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
-                styles.push(newStyle);
-                localStorage.setItem(MY_STYLE_KEY, JSON.stringify(styles));
-            } catch (e) {
-                // 失敗したらメモリに保存
-                console.warn('LocalStorage unavailable, using memory.', e);
-                memoryStyles.push(newStyle);
-                alert('ブラウザの制限により保存できませんでした。\n一時的にメモリに保存します（リロードすると消えます）。');
-            }
-            loadMyStyles();
-        };
-
-        window.applyMyStyle = (id) => { 
-            if (!isImageLoaded) return;
-            try {
-                let styles;
-                try {
-                    styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
-                } catch(e) {
-                    styles = memoryStyles;
-                }
-
-                const style = styles.find(s => s.id === id);
-                if (style) {
-                    resetParams(globalParams); 
-                    Object.assign(globalParams, style.params);
-                    saveHistoryState();
-                    updateInputDisplays(globalParams, '');
-                    render();
-                }
-            } catch(e) {}
-        };
-
-        window.deleteMyStyle = (id) => { 
-            if (!confirm('このスタイルを削除しますか？')) return;
-            try {
-                try {
-                    let styles = JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]');
-                    styles = styles.filter(s => s.id !== id);
-                    localStorage.setItem(MY_STYLE_KEY, JSON.stringify(styles));
-                } catch(e) {
-                    memoryStyles = memoryStyles.filter(s => s.id !== id);
-                }
-                loadMyStyles();
-            } catch(e) {}
-        };
-
-        // Initialize My Styles on load
-        loadMyStyles();
 
         updateInputDisplays(globalParams, ''); updateInputDisplays(localParams, 'local');
     </script>
